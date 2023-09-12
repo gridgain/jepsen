@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export CONTAINERS=10
+export CONTAINERS=2
 export NETPREF=192.168.122
 
 if [[ ! $USER ]]; then
@@ -67,9 +67,12 @@ EOF
 	done
 
 	start
+	echo "Waiting containers to start"
+	sleep 15
 
 	echo "08. Setup SSHD in lxc"
 	for (( i=1; i<=$CONTAINERS; i++ )) do
+	  sudo lxc-attach -n n${i} -- apt-get update -y
 	  sudo lxc-attach -n n${i} -- apt-get install -y openssh-server sudo wget unzip openjdk-11-jdk-headless
 	  sudo lxc-attach -n n${i} -- bash -c 'echo -e "root\nroot\n" | passwd root';
 	  sudo lxc-attach -n n${i} -- sed -i 's,^#\?PermitRootLogin .*,PermitRootLogin yes,g' /etc/ssh/sshd_config;
