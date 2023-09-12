@@ -26,3 +26,52 @@ run serve` on the control node, in your test directory), you can open it
 locally by running using `bin/web`. This can be a handy way to browse test
 results.
 
+## Prepequisites
+
+Initially need to config LXD on host machine. Run:
+ ```bash
+ sudo lxd init
+ ```
+ Init config may look like:
+
+```text
+ config:
+   images.auto_update_interval: "0"
+ networks: []
+ storage_pools:
+ - config:
+     size: 30GiB
+   description: ""
+   name: default
+   driver: zfs
+ profiles:
+ - config: {}
+   description: ""
+   devices:
+     root:
+       path: /
+       pool: default
+       type: disk
+   name: default
+ projects: []
+ cluster: null
+```
+
+# Possible errors:
+
+# 1) If you get keyring error like: The specified keyring /var/cache/lxc/debian/archive-key.gpg may be incorrect or out of date
+# Just download the new keys and import it with:
+#
+# wget "https://ftp-master.debian.org/keys/release-10.asc"
+# sudo gpg --no-default-keyring --keyring /var/cache/lxc/debian/archive-key.gpg --import release-10.asc
+
+# 2) If you get an error tryint to run virsh commands like:
+# error: failed to connect to the hypervisor
+# error: Failed to connect socket to '/var/run/libvirt/libvirt-sock': No such file or directory
+#
+# Install kvm with:
+# sudo apt install qemu qemu-kvm libvirt-clients libvirt-daemon-system virtinst bridge-utils
+# sudo systemctl enable libvirtd
+# sudo systemctl start libvirtd
+
+#export USER=<PLACE_YOUR_USERNAME_HERE>
