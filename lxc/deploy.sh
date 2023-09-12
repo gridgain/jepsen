@@ -44,7 +44,7 @@ EOF
 	echo "05. Add hostnames"
 	#echo -e "nameserver 192.168.122.1\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 
-	if [ ! grep -q "Jepsen hosts" /etc/hosts ]; then
+	if ! grep -q "Jepsen hosts" /etc/hosts; then
 		echo "Jepsen hosts" >> /etc/hosts
 
 		for (( i=1; i<=$CONTAINERS; i++ )) do
