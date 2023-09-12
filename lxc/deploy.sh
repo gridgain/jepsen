@@ -50,10 +50,7 @@ EOF
 		for (( i=1; i<=$CONTAINERS; i++ )) do
 			echo -e "${NETPREF}.${i} n${1}" >> /etc/hosts
 		done
-    fi
-
-	# NOTE: systemd не даёт записывать данные в `/etc/resolv.conv`, они стираются при перезагрузке
-	# пробую тупо добавить адреса в /etc/hosts?
+  fi
 
 	echo "06. Setup dhcp client dns"
 	echo -e "prepend domain-name-servers ${NETPREF}.1;" >>/etc/dhcp/dhclient.conf
