@@ -3,7 +3,6 @@
 export CONTAINERS=10
 export NETPREF=192.168.122
 
-
 if [[ ! $USER ]]; then
    echo "Specify USER variable"
    exit 1
@@ -13,8 +12,6 @@ if [ `whoami` != 'root' ]; then
     echo "Run as root"
     exit 2
 fi
-
-
 
 function setup {
 	echo "01. Create"
@@ -75,7 +72,6 @@ EOF
 	start
 
 	echo "08. Setup SSHD in lxc"
-	#!/bin/bash
 	for (( i=1; i<=$CONTAINERS; i++ )) do
 	  sudo lxc-attach -n n${i} -- apt-get install -y openssh-server sudo wget unzip openjdk-11-jdk-headless
 	  sudo lxc-attach -n n${i} -- bash -c 'echo -e "root\nroot\n" | passwd root';
@@ -98,7 +94,6 @@ function start {
 
 }
 
-
 function stop {
     echo "01 Stop LXC"
     #set -xe
@@ -106,8 +101,6 @@ function stop {
 	for (( i=1; i<=$CONTAINERS; i++ )) do
 	  lxc-stop -n n$i
 	done
-
-
 }
 
 function cleanup {
