@@ -8,14 +8,20 @@ by Jepsen.
 
 ## Quickstart
 
-Assuming you have LXC, run (requires root privileges):
+Check /lxc/deploy.sh script. If necessary - change:
+
+* CONTAINERS - number of container you need (try to start one to check)
+* NETPREF - LXC network prefix (for example: network 192.168.0.0/24 should have 192.168.0)
+
+Assuming you have LXC installed, run (requires root privileges):
 
 ```
-./Deploy.sh setup
+./deploy.sh setup
 ```
 
-which will setup 10 nodes and set IPs.
+which will set up 10 nodes and set IPs.
 The other commands is:
+
 * start - start containters
 * stop - stop containter
 * cleanup - destroy containers
