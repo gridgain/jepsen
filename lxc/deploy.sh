@@ -2,6 +2,7 @@
 
 export CONTAINERS=2
 export NETPREF=192.168.122
+export KEYFILE=/home/$USER/.ssh/id_rsa.pub
 
 if [[ ! $USER ]]; then
    echo "Specify USER variable"
@@ -14,6 +15,7 @@ if [ `whoami` != 'root' ]; then
 fi
 
 function setup {
+  set -ex
 	echo "01. Create"
 	for (( i=1; i<=$CONTAINERS; i++ )) do lxc-create -n n$i -t debian -- --release buster; done
 
@@ -57,8 +59,6 @@ EOF
 	service networking restart
 
 	echo "07. Copy keys to the lxc containers"
-	export KEYFILE=/home/$USER/.ssh/id_rsa.pub
-
 	for (( i=1; i<=$CONTAINERS; i++ )) do
 	  mkdir -p /var/lib/lxc/n${i}/rootfs/root/.ssh
 	  chmod 700 /var/lib/lxc/n${i}/rootfs/root/.ssh/
@@ -96,7 +96,6 @@ function start {
 
 function stop {
     echo "01 Stop LXC"
-    #set -xe
 
 	for (( i=1; i<=$CONTAINERS; i++ )) do
 	  lxc-stop -n n$i

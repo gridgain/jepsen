@@ -16,6 +16,7 @@ Check /lxc/deploy.sh script. If necessary - change:
 Assuming you have LXC installed, run (requires root privileges):
 
 ```
+export USER=<PLACE_YOUR_USERNAME_HERE>
 ./deploy.sh setup
 ```
 
@@ -65,19 +66,24 @@ Initially need to config LXD on host machine. Run:
 
 # Possible errors:
 
-# 1) If you get keyring error like: The specified keyring /var/cache/lxc/debian/archive-key.gpg may be incorrect or out of date
-# Just download the new keys and import it with:
-#
-# wget "https://ftp-master.debian.org/keys/release-10.asc"
-# sudo gpg --no-default-keyring --keyring /var/cache/lxc/debian/archive-key.gpg --import release-10.asc
+### 1) If you get keyring error like: The specified keyring /var/cache/lxc/debian/archive-key.gpg may be incorrect or out of date
 
-# 2) If you get an error tryint to run virsh commands like:
-# error: failed to connect to the hypervisor
-# error: Failed to connect socket to '/var/run/libvirt/libvirt-sock': No such file or directory
-#
-# Install kvm with:
-# sudo apt install qemu qemu-kvm libvirt-clients libvirt-daemon-system virtinst bridge-utils
-# sudo systemctl enable libvirtd
-# sudo systemctl start libvirtd
+Just download the new keys and import it with:
 
-#export USER=<PLACE_YOUR_USERNAME_HERE>
+```shell
+wget "https://ftp-master.debian.org/keys/release-10.asc"
+sudo gpg --no-default-keyring --keyring /var/cache/lxc/debian/archive-key.gpg --import release-10.asc
+```
+
+### 2) If you get an error tryint to run virsh commands like:
+error: failed to connect to the hypervisor
+error: Failed to connect socket to '/var/run/libvirt/libvirt-sock': No such file or directory
+
+ Install kvm with:
+
+```shell
+ sudo apt install qemu qemu-kvm libvirt-clients libvirt-daemon-system virtinst bridge-utils
+ sudo systemctl enable libvirtd
+ sudo systemctl start libvirtd
+```
+
