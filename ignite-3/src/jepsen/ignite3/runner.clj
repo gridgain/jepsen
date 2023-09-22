@@ -3,11 +3,12 @@
   (:require [clojure.pprint :refer [pprint]]
             [clojure.tools.logging :refer :all]
             [jepsen.cli :as jc]
-            [jepsen.core :as jepsen]))
+            [jepsen.core :as jepsen]
+            [jepsen.ignite3.register :as register]))
 
 (def tests
   "A map of test names to test constructors."
-  {})
+  {"register" register/test})
 
 (def nemesis-types
   {"noop"                   jepsen.nemesis/noop})
