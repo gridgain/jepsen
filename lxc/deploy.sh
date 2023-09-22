@@ -50,7 +50,7 @@ EOF
 		echo "Jepsen hosts" >> /etc/hosts
 
 		for (( i=1; i<=$CONTAINERS; i++ )) do
-			echo -e "${NETPREF}.${i} n${1}" >> /etc/hosts
+			echo -e "${NETPREF}.${i} n${i}" >> /etc/hosts
 		done
   fi
 
