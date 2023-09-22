@@ -44,7 +44,7 @@ EOF
 	virsh net-start default
 
 	echo "05. Add hostnames"
-	#echo -e "nameserver 192.168.122.1\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
+	#echo -e "nameserver ${NETPREF}.1\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 
 	if ! grep -q "Jepsen hosts" /etc/hosts; then
 		echo "# Jepsen hosts" >> /etc/hosts
