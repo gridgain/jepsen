@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export CONTAINERS=2
-export NETPREF=192.168.122
+export NETPREF=192.168.1
 export KEYFILE=/home/$USER/.ssh/id_rsa.pub
 
 if [[ ! $USER ]]; then
