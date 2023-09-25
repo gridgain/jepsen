@@ -25,7 +25,7 @@
   "compare and set operation"
   [_ _] {:type :invoke, :f :cas, :value [(rand-int 5) (rand-int 5)]})
 
-(defrecord Client []
+(defrecord Client [ignite]
   client/Client
 
   (open! [this test node]
@@ -47,7 +47,7 @@
   (ignite3/basic-test
     (merge
       {:name      "register-test"
-       :client    (Client.)
+       :client    (Client. nil)
        :checker   (independent/checker
                     (checker/compose
                       {:linearizable (checker/linearizable {:model (model/cas-register)})
