@@ -11,7 +11,7 @@
 
 (def table-name "REGISTER")
 
-(def sql-create (str"create table if not exists " table-name "(key varchar prmary int, val int)"))
+(def sql-create (str"create table if not exists " table-name "(key varchar primary key, val int)"))
 
 (defn r
   "read operation"
