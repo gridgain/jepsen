@@ -1,5 +1,6 @@
 (ns jepsen.ignite3.runner
   "Runs Apache Ignite 3 tests."
+  (:gen-class)
   (:require [clojure.pprint :refer [pprint]]
             [clojure.tools.logging :refer :all]
             [jepsen.cli :as jc]

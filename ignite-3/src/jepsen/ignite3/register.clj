@@ -30,11 +30,11 @@
 
   (open! [this test node]
     (log/info "Node: " node)
-    (let [ignite (.build (.addresses (IgniteClient/builder) (str node ":10800")))
+    (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))
           create-stmt (.createStatement (.sql ignite) sql-create)]
       (with-open [session (.createSession (.sql ignite))
                   rs (.execute session nil create-stmt (into-array []))]
-        (log/info "Table" table-name "created"))
+        (log/info "Table" table-name "created:" (.next rs)))
       (assoc this :ignite ignite)))
 
   (setup! [this test])
