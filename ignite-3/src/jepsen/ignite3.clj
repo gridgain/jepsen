@@ -1,14 +1,29 @@
 (ns jepsen.ignite3
   (:require [clojure.tools.logging :refer :all]
             [jepsen [control :as c]
-                    [db      :as db]
-                    [generator :as gen]
-                    [tests   :as tests]]
+             [db :as db]
+             [generator :as gen]
+             [tests :as tests]]
+            [jepsen.control.util :as cu]
             [jepsen.os.centos :as centos]
             [jepsen.os.debian :as debian]))
 
-(def db-dir "/home/zloddey/temp/QA-4202/ignite3-db-3.0.0-SNAPSHOT")
-(def cli-dir "/home/zloddey/temp/QA-4202/ignite3-cli-3.0.0-SNAPSHOT")
+(def server-dir "/opt/ignite3")
+
+(defn db-dir
+  [test]
+  (str server-dir "ignite3-db-" (:version test)))
+
+(defn cli-dir
+  [test]
+  (str server-dir "ignite3-cli-" (:version test)))
+
+(defn ignite-url
+  "Constructs the URL; either passing through the test's URL, or
+  constructing one from the version."
+  [test]
+  (or (:url test)
+      (str "http://192.168.1.74:8000/ignite3-" (:version test) ".zip")))
 
 (defn start!
   "Starts server for the given node."
@@ -25,7 +40,9 @@
   (reify
     db/DB
     (setup! [_ test node]
-      (info node "Installing Apache Ignite" version))
+      (info node "Installing Apache Ignite" version)
+      (c/su
+        (cu/install-archive! (ignite-url test) server-dir)))
 
     (teardown! [_ test node]
       (info node "Teardown Apache Ignite" version))
