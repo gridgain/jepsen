@@ -72,6 +72,11 @@
   [operations time-limit]
   (->> (gen/mix operations)
        (gen/stagger 1/10)
+       (gen/nemesis
+         (gen/mix (cycle [(gen/sleep 5)
+                          {:type :info, :f :start}
+                          (gen/sleep 1)
+                          {:type info, :f :stop}])))
        (gen/time-limit time-limit)))
 
 (defn basic-test
