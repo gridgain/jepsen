@@ -33,7 +33,7 @@
     (let [ignite (.build (.addresses (IgniteClient/builder) (str node ":10800")))
           create-stmt (.createStatement (.sql ignite) sql-create)]
       (with-open [session (.createSession (.sql ignite))
-                  rs (.execute session nil create-stmt (array))]
+                  rs (.execute session nil create-stmt (into-array []))]
         (log/info "Table" table-name "created"))
       (assoc this :ignite ignite)))
 
