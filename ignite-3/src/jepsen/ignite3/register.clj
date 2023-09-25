@@ -11,6 +11,8 @@
 
 (def table-name "REGISTER")
 
+(def key "k")
+
 (def sql-create (str"create table if not exists " table-name "(key varchar primary key, val int)"))
 
 (defn r
@@ -38,9 +40,24 @@
       (assoc this :ignite ignite)))
 
   (setup! [this test])
-  (invoke! [this test op])
+
+  (invoke! [this test op]
+    (try
+      (case (:f op)
+        :read (let [kv-view (.keyValueView (.table (.tables ignite) table-name) String Integer)
+                    value (.get kv-view nil key)]
+                (assoc op :type :ok :value value))
+        :write (let [kv-view (.keyValueView (.table (.tables ignite) table-name) String Integer)]
+                 (.put kv-view nil key (:value op))
+                 (assoc op :type :ok))
+        :cas (let [kv-view (.keyValueView (.table (.tables ignite) table-name) String Integer)
+                   [value value'] (:value op)]
+               (assoc op :type (if (.replace kv-view nil key value value') :ok :fail))))))
+
   (teardown! [this test])
-  (close! [this test]))
+
+  (close! [this test]
+    (.close ignite)))
 
 (defn test
   [opts]
