@@ -34,7 +34,7 @@
           create-stmt (.createStatement (.sql ignite) sql-create)]
       (with-open [session (.createSession (.sql ignite))
                   rs (.execute session nil create-stmt (into-array []))]
-        (log/info "Table" table-name "created:" (.next rs)))
+        (log/info "Table" table-name "created"))
       (assoc this :ignite ignite)))
 
   (setup! [this test])
