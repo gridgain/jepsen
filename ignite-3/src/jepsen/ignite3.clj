@@ -3,7 +3,8 @@
             [jepsen [control :as c]
              [db :as db]
              [generator :as gen]
-             [tests :as tests]]
+             [tests :as tests]
+             [util :as util]]
             [jepsen.control.util :as cu]
             [jepsen.os.centos :as centos]
             [jepsen.os.debian :as debian]))
@@ -35,6 +36,19 @@
         (c/exec "bin/ignite3" "cluster" "init" "--cluster-name=ignite-cluster" "--meta-storage-node=defaultNode"))
   (Thread/sleep 3000))
 
+(defn stop!
+  "Shuts down server."
+  [node test]
+  (c/su
+    (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))))
+
+(defn nuke!
+  "Shuts down server and destroys all data."
+  [node test]
+  (c/su
+    (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))
+    (c/exec :rm :-rf server-dir)))
+
 (defn db
   "Apache Ignite 3 cluster life cycle."
   [version]
@@ -47,11 +61,12 @@
         (start! node test)))
 
     (teardown! [_ test node]
-      (info node "Teardown Apache Ignite" version))
+      (info node "Teardown Apache Ignite" version)
+      (nuke! node test))
 
     db/LogFiles
     (log-files [_ test node]
-      [])))
+      (seq (str (db-dir test) "/log/ignite3db-0.log")))))
 
 (defn generator
   [operations time-limit]
