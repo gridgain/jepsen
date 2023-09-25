@@ -66,7 +66,7 @@
 
     db/LogFiles
     (log-files [_ test node]
-      (seq (str (db-dir test) "/log/ignite3db-0.log")))))
+      (list (str (db-dir test) "/log/ignite3db-0.log")))))
 
 (defn generator
   [operations time-limit]
