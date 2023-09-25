@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [jepsen "0.3.3"]
+                 [org.apache.ignite/ignite-client "3.0.0-SNAPSHOT"]
                  [org.apache.ignite/ignite-core "3.0.0-SNAPSHOT"]]
   :java-source-paths ["src/java"]
   :target-path "target/%s"

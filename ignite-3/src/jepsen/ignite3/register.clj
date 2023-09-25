@@ -1,11 +1,17 @@
 (ns jepsen.ignite3.register
   "Single atomic register test"
-  (:require [jepsen [checker :as checker]
+  (:require [clojure.tools.logging :as log]
+            [jepsen [checker :as checker]
                     [client :as client]
                     [ignite3 :as ignite3]
                     [independent :as independent]]
             [jepsen.checker.timeline :as timeline]
-            [knossos.model :as model]))
+            [knossos.model :as model])
+  (:import (org.apache.ignite.client IgniteClient)))
+
+(def table-name "REGISTER")
+
+(def sql-create (str"create table if not exists " table-name "(key varchar prmary int, val int)"))
 
 (defn r
   "read operation"
@@ -21,7 +27,20 @@
 
 (defrecord Client []
   client/Client
-  (open! [this test node]))
+
+  (open! [this test node]
+    (log/info "Node: " node)
+    (let [ignite (.build (.addresses (IgniteClient/builder) (str node ":10800")))
+          create-stmt (.createStatement (.sql ignite) sql-create)]
+      (with-open [session (.createSession (.sql ignite))
+                  rs (.execute session nil create-stmt (array))]
+        (log/info "Table" table-name "created"))
+      (assoc this :ignite ignite)))
+
+  (setup! [this test])
+  (invoke! [this test op])
+  (teardown! [this test])
+  (close! [this test]))
 
 (defn test
   [opts]
