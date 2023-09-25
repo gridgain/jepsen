@@ -12,11 +12,11 @@
 
 (defn db-dir
   [test]
-  (str server-dir "ignite3-db-" (:version test)))
+  (str server-dir "/ignite3-db-" (:version test)))
 
 (defn cli-dir
   [test]
-  (str server-dir "ignite3-cli-" (:version test)))
+  (str server-dir "/ignite3-cli-" (:version test)))
 
 (defn ignite-url
   "Constructs the URL; either passing through the test's URL, or
@@ -29,10 +29,11 @@
   "Starts server for the given node."
   [node test]
   (info node "Starting server node")
-  (c/cd db-dir (c/exec "bin/ignite3-db" "start"))
+  (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
   (Thread/sleep 3000)
-  (c/cd cli-dir (c/exec "bin/ignite3" "exec" "cluster" "init" "--cluster-name=ignite-cluster"
-                        "--meta-storage-node=defaultNode")))
+  (c/cd (cli-dir test)
+        (c/exec "bin/ignite3" "cluster" "init" "--cluster-name=ignite-cluster" "--meta-storage-node=defaultNode"))
+  (Thread/sleep 3000))
 
 (defn db
   "Apache Ignite 3 cluster life cycle."
@@ -42,7 +43,8 @@
     (setup! [_ test node]
       (info node "Installing Apache Ignite" version)
       (c/su
-        (cu/install-archive! (ignite-url test) server-dir)))
+        (cu/install-archive! (ignite-url test) server-dir)
+        (start! node test)))
 
     (teardown! [_ test node]
       (info node "Teardown Apache Ignite" version))
