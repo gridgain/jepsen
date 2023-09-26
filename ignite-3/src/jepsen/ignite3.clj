@@ -26,6 +26,21 @@
   (or (:url test)
       (str "http://192.168.1.74:8000/ignite3-" (:version test) ".zip")))
 
+(defn list-nodes
+  "Creates a list of nodes the current node should connect to."
+  [all-nodes current-node]
+  (let [other-nodes (remove #(= % current-node) all-nodes)]
+    (if (seq other-nodes)
+      (for [n other-nodes] (str "\"" n ":3344\""))
+      ["\"localhost:3344\""])))
+
+(defn configure-server!
+  "Creates a server config file and uploads it to the given node."
+  [test all-nodes current-node]
+  (let [content (list-nodes all-nodes current-node)
+        replace-command (str "s/\"localhost:3344\"/" (clojure.string/join ", " content) "/")]
+    (c/exec :sed :-i replace-command (str (db-dir test) "/etc/ignite-config.conf"))))
+
 (defn start!
   "Starts server for the given node."
   [node test]
@@ -58,6 +73,7 @@
       (info node "Installing Apache Ignite" version)
       (c/su
         (cu/install-archive! (ignite-url test) server-dir)
+        (configure-server! test (:nodes test) node)
         (start! node test)))
 
     (teardown! [_ test node]
