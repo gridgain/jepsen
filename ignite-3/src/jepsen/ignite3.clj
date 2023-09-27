@@ -19,13 +19,6 @@
   [test]
   (str server-dir "/ignite3-cli-" (:version test)))
 
-(defn ignite-url
-  "Constructs the URL; either passing through the test's URL, or
-  constructing one from the version."
-  [test]
-  (or (:url test)
-      (str "http://192.168.1.74:8000/ignite3-" (:version test) ".zip")))
-
 (defn list-nodes
   "Creates a list of nodes the current node should connect to."
   [all-nodes current-node]
@@ -72,7 +65,7 @@
     (setup! [_ test node]
       (info node "Installing Apache Ignite" version)
       (c/su
-        (cu/install-archive! (ignite-url test) server-dir)
+        (cu/install-archive! (:url test) server-dir)
         (configure-server! test (:nodes test) node)
         (start! node test)))
 
