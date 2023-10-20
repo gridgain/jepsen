@@ -47,13 +47,15 @@
   (info node "Starting server node")
   (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
   (Thread/sleep 3000)
-  (c/cd (cli-dir test)
-        (c/exec "bin/ignite3"
-                "cluster"
-                "init"
-                "--cluster-name=ignite-cluster"
-                (str "--meta-storage-node=" (node-name (:nodes test) node))))
-  (Thread/sleep 3000))
+  (when (= 0 (.indexOf (:nodes test) node))
+    (info node "Init cluster")
+    (c/cd (cli-dir test)
+          (c/exec "bin/ignite3"
+                  "cluster"
+                  "init"
+                  "--cluster-name=ignite-cluster"
+                  (str "--meta-storage-node=" (node-name (:nodes test) node))))
+    (Thread/sleep 3000)))
 
 (defn stop!
   "Shuts down server."
