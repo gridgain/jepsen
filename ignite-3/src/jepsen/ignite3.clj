@@ -27,10 +27,17 @@
       (for [n other-nodes] (str "\"" n ":3344\""))
       ["\"localhost:3344\""])))
 
+(defn node-name
+  "Generates a default name for the given node."
+  [all-nodes current-node]
+  (str "node-" (inc (.indexOf all-nodes current-node))))
+
 (defn configure-server!
   "Creates a server config file and uploads it to the given node."
   [test node]
   (let [all-nodes (:nodes test)]
+    (c/exec :sed :-i (str "s/defaultNode/" (node-name all-nodes node) "/")
+                     (str (db-dir test) "/etc/vars.env"))
     (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
                      (str (db-dir test) "/etc/ignite-config.conf"))))
 
@@ -41,7 +48,11 @@
   (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
   (Thread/sleep 3000)
   (c/cd (cli-dir test)
-        (c/exec "bin/ignite3" "cluster" "init" "--cluster-name=ignite-cluster" "--meta-storage-node=defaultNode"))
+        (c/exec "bin/ignite3"
+                "cluster"
+                "init"
+                "--cluster-name=ignite-cluster"
+                (str "--meta-storage-node=" (node-name (:nodes test) node))))
   (Thread/sleep 3000))
 
 (defn stop!
