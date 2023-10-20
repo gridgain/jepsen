@@ -92,7 +92,9 @@
 
     db/LogFiles
     (log-files [_ test node]
-      (list (db-dir test "log" "ignite3db-0.log")))))
+      (let [files (c/exec :find (db-dir test "log") :-type "f" :-name "ignite3*.log")]
+        (info node files)
+        (into [] (.split files "\n"))))))
 
 (defn generator
   [operations time-limit]
