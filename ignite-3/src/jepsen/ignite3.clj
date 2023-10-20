@@ -29,14 +29,15 @@
 
 (defn configure-server!
   "Creates a server config file and uploads it to the given node."
-  [test all-nodes current-node]
-  (let [content (list-nodes all-nodes current-node)
+  [test node]
+  (let [all-nodes (:nodes test)
+        content (list-nodes all-nodes node)
         replace-command (str "s/\"localhost:3344\"/" (clojure.string/join ", " content) "/")]
     (c/exec :sed :-i replace-command (str (db-dir test) "/etc/ignite-config.conf"))))
 
 (defn start!
   "Starts server for the given node."
-  [node test]
+  [test node]
   (info node "Starting server node")
   (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
   (Thread/sleep 3000)
@@ -66,8 +67,8 @@
       (info node "Installing Apache Ignite" version)
       (c/su
         (cu/install-archive! (:url test) server-dir)
-        (configure-server! test (:nodes test) node)
-        (start! node test)))
+        (configure-server! test node)
+        (start! test node)))
 
     (teardown! [_ test node]
       (info node "Teardown Apache Ignite" version)
