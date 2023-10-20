@@ -30,10 +30,9 @@
 (defn configure-server!
   "Creates a server config file and uploads it to the given node."
   [test node]
-  (let [all-nodes (:nodes test)
-        content (list-nodes all-nodes node)
-        replace-command (str "s/\"localhost:3344\"/" (clojure.string/join ", " content) "/")]
-    (c/exec :sed :-i replace-command (str (db-dir test) "/etc/ignite-config.conf"))))
+  (let [all-nodes (:nodes test)]
+    (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
+                     (str (db-dir test) "/etc/ignite-config.conf"))))
 
 (defn start!
   "Starts server for the given node."
