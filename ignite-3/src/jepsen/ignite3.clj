@@ -12,12 +12,16 @@
 (def server-dir "/opt/ignite3")
 
 (defn db-dir
-  [test]
-  (str server-dir "/ignite3-db-" (:version test)))
+  "Creates path to the DB main directory, or its subpath (items in 'more')."
+  [test & more]
+  (clojure.string/join "/" (concat [server-dir (str "ignite3-db-" (:version test))]
+                                   more)))
 
 (defn cli-dir
-  [test]
-  (str server-dir "/ignite3-cli-" (:version test)))
+  "Creates path to the CLI main directory, or its subpath (items in 'more')."
+  [test & more]
+  (clojure.string/join "/" (concat [server-dir (str "ignite3-cli-" (:version test))]
+                                   more)))
 
 (defn list-nodes
   "Creates a list of nodes the current node should connect to."
@@ -37,9 +41,9 @@
   [test node]
   (let [all-nodes (:nodes test)]
     (c/exec :sed :-i (str "s/defaultNode/" (node-name all-nodes node) "/")
-                     (str (db-dir test) "/etc/vars.env"))
+                     (db-dir test "etc" "vars.env"))
     (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
-                     (str (db-dir test) "/etc/ignite-config.conf"))))
+                     (db-dir test "etc" "ignite-config.conf"))))
 
 (defn start!
   "Starts server for the given node."
@@ -88,7 +92,7 @@
 
     db/LogFiles
     (log-files [_ test node]
-      (list (str (db-dir test) "/log/ignite3db-0.log")))))
+      (list (db-dir test "log" "ignite3db-0.log")))))
 
 (defn generator
   [operations time-limit]
