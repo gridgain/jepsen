@@ -12,12 +12,16 @@
 (def server-dir "/opt/ignite3")
 
 (defn db-dir
-  [test]
-  (str server-dir "/ignite3-db-" (:version test)))
+  "Creates path to the DB main directory, or its subpath (items in 'more')."
+  [test & more]
+  (clojure.string/join "/" (concat [server-dir (str "ignite3-db-" (:version test))]
+                                   more)))
 
 (defn cli-dir
-  [test]
-  (str server-dir "/ignite3-cli-" (:version test)))
+  "Creates path to the CLI main directory, or its subpath (items in 'more')."
+  [test & more]
+  (clojure.string/join "/" (concat [server-dir (str "ignite3-cli-" (:version test))]
+                                   more)))
 
 (defn list-nodes
   "Creates a list of nodes the current node should connect to."
@@ -27,22 +31,35 @@
       (for [n other-nodes] (str "\"" n ":3344\""))
       ["\"localhost:3344\""])))
 
+(defn node-name
+  "Generates a default name for the given node."
+  [all-nodes current-node]
+  (str "node-" (inc (.indexOf all-nodes current-node))))
+
 (defn configure-server!
   "Creates a server config file and uploads it to the given node."
-  [test all-nodes current-node]
-  (let [content (list-nodes all-nodes current-node)
-        replace-command (str "s/\"localhost:3344\"/" (clojure.string/join ", " content) "/")]
-    (c/exec :sed :-i replace-command (str (db-dir test) "/etc/ignite-config.conf"))))
+  [test node]
+  (let [all-nodes (:nodes test)]
+    (c/exec :sed :-i (str "s/defaultNode/" (node-name all-nodes node) "/")
+                     (db-dir test "etc" "vars.env"))
+    (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
+                     (db-dir test "etc" "ignite-config.conf"))))
 
 (defn start!
   "Starts server for the given node."
-  [node test]
+  [test node]
   (info node "Starting server node")
   (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
   (Thread/sleep 3000)
-  (c/cd (cli-dir test)
-        (c/exec "bin/ignite3" "cluster" "init" "--cluster-name=ignite-cluster" "--meta-storage-node=defaultNode"))
-  (Thread/sleep 3000))
+  (when (= 0 (.indexOf (:nodes test) node))
+    (info node "Init cluster")
+    (c/cd (cli-dir test)
+          (c/exec "bin/ignite3"
+                  "cluster"
+                  "init"
+                  "--cluster-name=ignite-cluster"
+                  (str "--meta-storage-node=" (node-name (:nodes test) node))))
+    (Thread/sleep 3000)))
 
 (defn stop!
   "Shuts down server."
@@ -66,8 +83,8 @@
       (info node "Installing Apache Ignite" version)
       (c/su
         (cu/install-archive! (:url test) server-dir)
-        (configure-server! test (:nodes test) node)
-        (start! node test)))
+        (configure-server! test node)
+        (start! test node)))
 
     (teardown! [_ test node]
       (info node "Teardown Apache Ignite" version)
@@ -75,7 +92,9 @@
 
     db/LogFiles
     (log-files [_ test node]
-      (list (str (db-dir test) "/log/ignite3db-0.log")))))
+      (let [files (c/exec :find (db-dir test "log") :-type "f" :-name "ignite3*.log")]
+        (info node files)
+        (into [] (.split files "\n"))))))
 
 (defn generator
   [operations time-limit]
