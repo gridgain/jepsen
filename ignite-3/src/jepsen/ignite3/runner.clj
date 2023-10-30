@@ -1,15 +1,17 @@
 (ns jepsen.ignite3.runner
   "Runs Apache Ignite 3 tests."
   (:gen-class)
-  (:require [clojure.pprint :refer [pprint]]
-            [clojure.tools.logging :refer :all]
-            [jepsen.cli :as jc]
-            [jepsen.core :as jepsen]
-            [jepsen.ignite3.register :as register]))
+  (:require [clojure.pprint             :refer [pprint]]
+            [clojure.tools.logging      :refer :all]
+            [jepsen.cli                 :as jc]
+            [jepsen.core                :as jepsen]
+            [jepsen.ignite3.append      :as append]
+            [jepsen.ignite3.register    :as register]))
 
 (def tests
   "A map of test names to test constructors."
-  {"register" register/test})
+  {"append"     append/test
+   "register"   register/test})
 
 (def nemesis-types
   {"noop"                   jepsen.nemesis/noop})
