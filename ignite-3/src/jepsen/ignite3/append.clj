@@ -15,9 +15,9 @@
             [knossos.model :as model])
   (:import (org.apache.ignite.client IgniteClient)))
 
-(def table-name "REGISTER")
+(def table-name "APPEND")
 
-(def sql-create (str"create table if not exists " table-name "(key varchar primary key, val int)"))
+(def sql-create (str "create table if not exists " table-name "(key varchar primary key, vals varchar(1000))"))
 
 (defrecord Client [ignite]
   client/Client
@@ -34,8 +34,15 @@
       (log/info "Table" table-name "created")))
 
   (invoke! [this test op]
-    ; TODO: implement
-    (log/info op)
+    (log/info "invoke: " op)
+    (let [ops   (:value op)
+          query (str "insert into " table-name " (key, vals) values (1, '2')")
+          tx    (.transactions ignite)
+          sql   (.sql ignite)
+          txn   (.begin tx)]
+      (with-open [session   (.createSession sql)
+                  rs        (.execute session txn query (into-array []))]
+        (.commit txn)))
     {})
 
   (teardown! [this test])
