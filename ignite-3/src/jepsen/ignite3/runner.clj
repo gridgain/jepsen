@@ -10,8 +10,8 @@
 
 (def tests
   "A map of test names to test constructors."
-  {"append"     append/test
-   "register"   register/test})
+  {"append"     append/append-test
+   "register"   register/register-test})
 
 (def nemesis-types
   {"noop"                   jepsen.nemesis/noop})

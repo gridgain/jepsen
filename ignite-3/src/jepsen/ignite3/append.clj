@@ -42,7 +42,7 @@
   (close! [this test]
     (.close ignite)))
 
-(defn test
+(defn append-test
   [opts]
   (ignite3/basic-test
     (merge
