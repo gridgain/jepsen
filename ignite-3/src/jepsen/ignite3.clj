@@ -101,17 +101,15 @@
   (->> (gen/mix operations)
        (gen/stagger 1/10)
        (gen/nemesis
-         ; without "take 100", we fail into infinity here (most probably, during print)
-         (take 100 (cycle [(gen/sleep 5)
-                           {:type :info, :f :start}
-                           (gen/sleep 1)
-                           {:type :info, :f :stop}])))
+         (cycle [(gen/sleep 5)
+                 {:type :info, :f :start}
+                 (gen/sleep 1)
+                 {:type :info, :f :stop}]))
        (gen/time-limit time-limit)))
 
 (defn basic-test
   "Sets up the test parameters common to all tests."
   [options]
-  (info :opts options)
   (merge tests/noop-test
          (dissoc options :test-fns)
          {:name    "basic-test"

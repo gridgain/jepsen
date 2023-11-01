@@ -37,7 +37,7 @@
 
 (defn log-test
   [t]
-  (info "Testing\n" (with-out-str (pprint t)))
+  (binding [*print-length* 100] (info "Testing\n" (with-out-str (pprint t))))
   t)
 
 (defn test-cmd
@@ -50,7 +50,6 @@
                                              :test :test-fns})))
            :usage (jc/test-usage)
            :run (fn [{:keys [options]}]
-                  (pprint options)
                   (doseq [i        (range (:test-count options))
                           test-fn  (:test-fns options)]
                     ; Rehydrate test and run
