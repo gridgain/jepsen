@@ -24,18 +24,19 @@
 
   (open! [this test node]
     (log/info "Node: " node)
-    (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))
-          create-stmt (.createStatement (.sql ignite) sql-create)]
-      (with-open [session (.createSession (.sql ignite))
-                  rs (.execute session nil create-stmt (into-array []))]
-        (log/info "Table" table-name "created"))
+    (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))]
       (assoc this :ignite ignite)))
 
-  (setup! [this test])
+  (setup! [this test]
+    (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
+                session (.createSession (.sql ignite))
+                rs (.execute session nil create-stmt (into-array []))]
+      (log/info "Table" table-name "created")))
 
   (invoke! [this test op]
     ; TODO: implement
-    (log/info op))
+    (log/info op)
+    {})
 
   (teardown! [this test])
 
