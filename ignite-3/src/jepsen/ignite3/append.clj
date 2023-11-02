@@ -40,21 +40,20 @@
                    (into [] (map #(Integer/parseInt %) (clojure.string/split (.stringValue (.next rs) 1) #",")))
                    []))]
           [:r k select-result]))
-      (do
-        (let [txn (.begin tx)]
-          (with-open [session   (.createSession sql)
-                      read-rs   (.execute session txn sql-select (into-array [k]))]
-            (if (.hasNext read-rs)
-              ; update existing list
-              (let [old-list    (.stringValue (.next read-rs) 1)
-                    new-list    (str old-list "," v)]
-                (log/info sql-update new-list k)
-                (with-open [write-rs (.execute session txn sql-update (object-array [new-list k]))]))
-              ; create a new list
-              (do
-                (log/info sql-insert k v)
-                (with-open [write-rs (.execute session txn sql-insert (object-array [k (str v)]))])))
-            (.commit txn)))
+      (let [txn (.begin tx)]
+        (with-open [session   (.createSession sql)
+                    read-rs   (.execute session txn sql-select (into-array [k]))]
+          (if (.hasNext read-rs)
+            ; update existing list
+            (let [old-list    (.stringValue (.next read-rs) 1)
+                  new-list    (str old-list "," v)]
+              (log/info sql-update new-list k)
+              (with-open [write-rs (.execute session txn sql-update (object-array [new-list k]))]))
+            ; create a new list
+            (do
+              (log/info sql-insert k v)
+              (with-open [write-rs (.execute session txn sql-insert (object-array [k (str v)]))])))
+          (.commit txn))
         [opcode k v]))))
 
 (defrecord Client [^Ignite ignite]
