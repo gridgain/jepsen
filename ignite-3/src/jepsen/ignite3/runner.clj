@@ -14,7 +14,8 @@
    "register"   register/register-test})
 
 (def nemesis-types
-  {"noop"                   jepsen.nemesis/noop})
+  {"noop"                   jepsen.nemesis/noop
+   "append"                 append/pseudo-noop})
 
 (def opt-spec
   "Command line options for tools.cli"

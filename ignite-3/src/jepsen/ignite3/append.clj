@@ -9,7 +9,7 @@
             [jepsen [checker :as checker]
                     [client :as client]
                     [ignite3 :as ignite3]
-                    [independent :as independent]]
+                    [nemesis :as nemesis]]
             [jepsen.checker.timeline :as timeline]
             [jepsen.tests.cycle.append :as app]
             [knossos.model :as model])
@@ -85,6 +85,17 @@
   ;
   (close! [this test]
     (.close ignite)))
+
+(def pseudo-noop
+  "Does nothing but logging."
+  (reify nemesis/Nemesis
+    (setup! [this test] this)
+    (invoke! [this test op]
+      (log/info "Nemesis received" op)
+      (assoc op :type :info))
+    (teardown! [this test] this)
+    nemesis/Reflection
+    (fs [this] #{})))
 
 (comment "for repl"
 
