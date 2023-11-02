@@ -42,7 +42,6 @@
     (let [ops   (:value op)
           tx    (.transactions ignite)
           sql   (.sql ignite)
-          ; txn   (.begin tx)
           result (map (fn [o]
                         (if
                           (= :r (first o))
@@ -59,9 +58,12 @@
                               [:r (second o) select-result]))
                           (do
                             (log/info sql-insert (rest o))
+                            (let [txn (.begin tx)]
+                              (with-open [session   (.createSession sql)
+                                          rs        (.execute session txn sql-insert (into-array [(nth o 1) (nth o 2)]))]
+                                (.commit txn)))
                             o))) ops)
           overall-result {:type :info, :f :txn, :value (into [] result)}]
-      ; (.commit txn)
       (log/info "Returned: " overall-result)
       overall-result))
   ;
@@ -76,6 +78,8 @@
 (client/setup! c {})
 
 (client/invoke! c {} {:type :invoke, :f :txn, :value [[:r 6 nil]]})
+
+(client/invoke! c {} {:type :invoke, :f :txn, :value [[:append 9 4]]})
 
 (client/close! c {})
 
