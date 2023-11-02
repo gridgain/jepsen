@@ -37,14 +37,14 @@
                            rs
                              (.execute session nil sql-select (into-array [(second o)]))]
                  (if (.hasNext rs)
-                   (.getString rs 2)
+                   (.stringValue (.next rs) 1)
                    []))]
           [:r (second o) select-result]))
       (do
         (log/info sql-insert (rest o))
         (let [txn (.begin tx)]
           (with-open [session   (.createSession sql)
-                      rs        (.execute session txn sql-insert (into-array [(nth o 1) (nth o 2)]))]
+                      rs        (.execute session txn sql-insert (object-array [(nth o 1) (str (nth o 2))]))]
             (.commit txn)))
         o))))
 
@@ -59,7 +59,7 @@
   (setup! [this test]
     (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
                 session (.createSession (.sql ignite))
-                rs (.execute session nil create-stmt (into-array []))]
+                rs (.execute session nil create-stmt (object-array []))]
       (log/info "Table" table-name "created")))
   ;
   (invoke! [this test op]
@@ -82,7 +82,7 @@
 (def c (client/open! (Client. nil) {} "127.0.0.1"))
 (client/setup! c {})
 
-(client/invoke! c {} {:type :invoke, :f :txn, :value [[:r 6 nil]]})
+(client/invoke! c {} {:type :invoke, :f :txn, :value [[:r 9 nil]]})
 
 (client/invoke! c {} {:type :invoke, :f :txn, :value [[:append 9 4]]})
 
