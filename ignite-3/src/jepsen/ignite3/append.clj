@@ -17,38 +17,70 @@
 
 (def table-name "APPEND")
 
-(def sql-create (str "create table if not exists " table-name "(key varchar primary key, vals varchar(1000))"))
+(def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
+
+(def sql-insert (str "insert into " table-name " (key, vals) values (?, ?)"))
+
+(def sql-select (str "select * from " table-name " where key = ?"))
 
 (defrecord Client [ignite]
   client/Client
-
+  ;
   (open! [this test node]
     (log/info "Node: " node)
     (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))]
       (assoc this :ignite ignite)))
-
+  ;
   (setup! [this test]
     (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
                 session (.createSession (.sql ignite))
                 rs (.execute session nil create-stmt (into-array []))]
       (log/info "Table" table-name "created")))
-
+  ;
   (invoke! [this test op]
-    (log/info "invoke: " op)
+    (log/info "Received: " op)
     (let [ops   (:value op)
-          query (str "insert into " table-name " (key, vals) values (1, '2')")
           tx    (.transactions ignite)
           sql   (.sql ignite)
-          txn   (.begin tx)]
-      (with-open [session   (.createSession sql)
-                  rs        (.execute session txn query (into-array []))]
-        (.commit txn)))
-    {})
-
+          ; txn   (.begin tx)
+          result (map (fn [o]
+                        (if
+                          (= :r (first o))
+                          (do
+                            (log/info sql-select (second o))
+                            (let [select-result
+                                   (with-open [session
+                                                 (.createSession sql)
+                                               rs
+                                                 (.execute session nil sql-select (into-array [(second o)]))]
+                                     (if (.hasNext rs)
+                                       (.getString rs 2)
+                                       []))]
+                              [:r (second o) select-result]))
+                          (do
+                            (log/info sql-insert (rest o))
+                            o))) ops)
+          overall-result {:type :info, :f :txn, :value (into [] result)}]
+      ; (.commit txn)
+      (log/info "Returned: " overall-result)
+      overall-result))
+  ;
   (teardown! [this test])
-
+  ;
   (close! [this test]
     (.close ignite)))
+
+(comment "for repl"
+
+(def c (client/open! (Client. nil) {} "127.0.0.1"))
+(client/setup! c {})
+
+(client/invoke! c {} {:type :invoke, :f :txn, :value [[:r 6 nil]]})
+
+(client/close! c {})
+
+"/for repl"
+)
 
 (defn append-test
   [opts]
