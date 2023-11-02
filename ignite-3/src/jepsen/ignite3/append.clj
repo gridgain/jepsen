@@ -13,7 +13,7 @@
             [jepsen.checker.timeline :as timeline]
             [jepsen.tests.cycle.append :as app]
             [knossos.model :as model])
-  (:import (org.apache.ignite.client IgniteClient)))
+  (:import (org.apache.ignite Ignite)))
 
 (def table-name "APPEND")
 
@@ -23,7 +23,32 @@
 
 (def sql-select (str "select * from " table-name " where key = ?"))
 
-(defrecord Client [ignite]
+(defn invoke-op [^Ignite ignite o]
+  "Perform a single operation in separate transaction"
+  (let [tx  (.transactions ignite)
+        sql (.sql ignite)]
+    (if
+      (= :r (first o))
+      (do
+        (log/info sql-select (second o))
+        (let [select-result
+               (with-open [session
+                             (.createSession sql)
+                           rs
+                             (.execute session nil sql-select (into-array [(second o)]))]
+                 (if (.hasNext rs)
+                   (.getString rs 2)
+                   []))]
+          [:r (second o) select-result]))
+      (do
+        (log/info sql-insert (rest o))
+        (let [txn (.begin tx)]
+          (with-open [session   (.createSession sql)
+                      rs        (.execute session txn sql-insert (into-array [(nth o 1) (nth o 2)]))]
+            (.commit txn)))
+        o))))
+
+(defrecord Client [^Ignite ignite]
   client/Client
   ;
   (open! [this test node]
@@ -42,27 +67,7 @@
     (let [ops   (:value op)
           tx    (.transactions ignite)
           sql   (.sql ignite)
-          result (map (fn [o]
-                        (if
-                          (= :r (first o))
-                          (do
-                            (log/info sql-select (second o))
-                            (let [select-result
-                                   (with-open [session
-                                                 (.createSession sql)
-                                               rs
-                                                 (.execute session nil sql-select (into-array [(second o)]))]
-                                     (if (.hasNext rs)
-                                       (.getString rs 2)
-                                       []))]
-                              [:r (second o) select-result]))
-                          (do
-                            (log/info sql-insert (rest o))
-                            (let [txn (.begin tx)]
-                              (with-open [session   (.createSession sql)
-                                          rs        (.execute session txn sql-insert (into-array [(nth o 1) (nth o 2)]))]
-                                (.commit txn)))
-                            o))) ops)
+          result (map #(invoke-op ignite %) ops)
           overall-result {:type :info, :f :txn, :value (into [] result)}]
       (log/info "Returned: " overall-result)
       overall-result))
