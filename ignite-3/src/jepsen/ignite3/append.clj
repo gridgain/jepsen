@@ -33,7 +33,7 @@
     (if
       (= :r opcode)
       (do
-        (log/info sql-select k)
+        ; (log/info sql-select k)
         (let [select-result
                (with-open [session  (.createSession sql)
                            rs       (.execute session nil sql-select (into-array [k]))]
@@ -48,11 +48,11 @@
             ; update existing list
             (let [old-list    (.stringValue (.next read-rs) 1)
                   new-list    (str old-list "," v)]
-              (log/info sql-update new-list k)
+              ; (log/info sql-update new-list k)
               (with-open [write-rs (.execute session txn sql-update (object-array [new-list k]))]))
             ; create a new list
             (do
-              (log/info sql-insert k v)
+              ; (log/info sql-insert k v)
               (with-open [write-rs (.execute session txn sql-insert (object-array [k (str v)]))])))
           (.commit txn))
         [opcode k v]))))
@@ -61,7 +61,7 @@
   client/Client
   ;
   (open! [this test node]
-    (log/info "Node: " node)
+    ; (log/info "Node: " node)
     (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))]
       (assoc this :ignite ignite)))
   ;
@@ -72,13 +72,13 @@
       (log/info "Table" table-name "created")))
   ;
   (invoke! [this test op]
-    (log/info "Received: " op)
+    ; (log/info "Received: " op)
     (let [ops   (:value op)
           tx    (.transactions ignite)
           sql   (.sql ignite)
           result (map #(invoke-op ignite %) ops)
           overall-result {:type :info, :f :txn, :value (into [] result)}]
-      (log/info "Returned: " overall-result)
+      ; (log/info "Returned: " overall-result)
       overall-result))
   ;
   (teardown! [this test])
@@ -91,7 +91,7 @@
   (reify nemesis/Nemesis
     (setup! [this test] this)
     (invoke! [this test op]
-      (log/info "Nemesis received" op)
+      ; (log/info "Nemesis received" op)
       (assoc op :type :info))
     (teardown! [this test] this)
     nemesis/Reflection
