@@ -13,7 +13,8 @@
             [jepsen.checker.timeline :as timeline]
             [jepsen.tests.cycle.append :as app]
             [knossos.model :as model])
-  (:import (org.apache.ignite Ignite)))
+  (:import (org.apache.ignite Ignite)
+           (org.apache.ignite.client IgniteClient)))
 
 (def table-name "APPEND")
 
