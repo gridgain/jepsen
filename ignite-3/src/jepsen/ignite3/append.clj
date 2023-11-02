@@ -25,39 +25,37 @@
 
 (def sql-select (str "select * from " table-name " where key = ?"))
 
-(defn invoke-op [^Ignite ignite o]
+(defn invoke-op [^Ignite ignite [opcode k v]]
   "Perform a single operation in separate transaction"
   (let [tx  (.transactions ignite)
         sql (.sql ignite)]
     (if
-      (= :r (first o))
+      (= :r opcode)
       (do
-        (log/info sql-select (second o))
+        (log/info sql-select k)
         (let [select-result
-               (with-open [session
-                             (.createSession sql)
-                           rs
-                             (.execute session nil sql-select (into-array [(second o)]))]
+               (with-open [session  (.createSession sql)
+                           rs       (.execute session nil sql-select (into-array [k]))]
                  (if (.hasNext rs)
                    (into [] (map #(Integer/parseInt %) (clojure.string/split (.stringValue (.next rs) 1) #",")))
                    []))]
-          [:r (second o) select-result]))
+          [:r k select-result]))
       (do
         (let [txn (.begin tx)]
           (with-open [session   (.createSession sql)
-                      read-rs   (.execute session txn sql-select (into-array [(second o)]))]
+                      read-rs   (.execute session txn sql-select (into-array [k]))]
             (if (.hasNext read-rs)
               ; update existing list
               (let [old-list    (.stringValue (.next read-rs) 1)
-                    new-list    (str old-list "," (nth o 2))]
-                (log/info sql-update new-list (nth o 1))
-                (with-open [write-rs (.execute session txn sql-update (object-array [new-list (nth o 1)]))]))
+                    new-list    (str old-list "," v)]
+                (log/info sql-update new-list k)
+                (with-open [write-rs (.execute session txn sql-update (object-array [new-list k]))]))
               ; create a new list
               (do
-                (log/info sql-insert (rest o))
-                (with-open [write-rs (.execute session txn sql-insert (object-array [(nth o 1) (str (nth o 2))]))])))
+                (log/info sql-insert k v)
+                (with-open [write-rs (.execute session txn sql-insert (object-array [k (str v)]))])))
             (.commit txn)))
-        o))))
+        [opcode k v]))))
 
 (defrecord Client [^Ignite ignite]
   client/Client
