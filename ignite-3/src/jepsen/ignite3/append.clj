@@ -37,7 +37,7 @@
                            rs
                              (.execute session nil sql-select (into-array [(second o)]))]
                  (if (.hasNext rs)
-                   (.stringValue (.next rs) 1)
+                   (into [] (map #(Integer/parseInt %) (clojure.string/split (.stringValue (.next rs) 1) #",")))
                    []))]
           [:r (second o) select-result]))
       (do
