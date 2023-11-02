@@ -21,6 +21,8 @@
 
 (def sql-insert (str "insert into " table-name " (key, vals) values (?, ?)"))
 
+(def sql-update (str "update " table-name " set vals = ? where key = ?"))
+
 (def sql-select (str "select * from " table-name " where key = ?"))
 
 (defn invoke-op [^Ignite ignite o]
@@ -41,10 +43,19 @@
                    []))]
           [:r (second o) select-result]))
       (do
-        (log/info sql-insert (rest o))
         (let [txn (.begin tx)]
           (with-open [session   (.createSession sql)
-                      rs        (.execute session txn sql-insert (object-array [(nth o 1) (str (nth o 2))]))]
+                      read-rs   (.execute session txn sql-select (into-array [(second o)]))]
+            (if (.hasNext read-rs)
+              ; update existing list
+              (let [old-list    (.stringValue (.next read-rs) 1)
+                    new-list    (str old-list "," (nth o 2))]
+                (log/info sql-update new-list (nth o 1))
+                (with-open [write-rs (.execute session txn sql-update (object-array [new-list (nth o 1)]))]))
+              ; create a new list
+              (do
+                (log/info sql-insert (rest o))
+                (with-open [write-rs (.execute session txn sql-insert (object-array [(nth o 1) (str (nth o 2))]))])))
             (.commit txn)))
         o))))
 
