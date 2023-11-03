@@ -36,19 +36,18 @@
         sql (.sql ignite)]
     (if
       (= :r opcode)
-      (do
-        (let [select-result
-               (with-open [session  (.createSession sql)
-                           rs       (run-sql session sql-select [k])]
-                 (if (.hasNext rs)
-                   (let [raw-result (.stringValue (.next rs) 1)
-                         strings    (clojure.string/split raw-result #",")]
-                     (->> strings
-                          (map #(Integer/parseInt %))
-                          (into [])))
-                   []))]
-          (.commit txn)
-          [:r k select-result]))
+      (let [select-result
+              (with-open [session  (.createSession sql)
+                          rs       (run-sql session sql-select [k])]
+                (if (.hasNext rs)
+                  (let [raw-result (.stringValue (.next rs) 1)
+                        strings    (clojure.string/split raw-result #",")]
+                    (->> strings
+                         (map #(Integer/parseInt %))
+                         (into [])))
+                  []))]
+        (.commit txn)
+        [:r k select-result])
       (with-open [session   (.createSession sql)
                   read-rs   (run-sql session txn sql-select [k])]
         (if (.hasNext read-rs)
