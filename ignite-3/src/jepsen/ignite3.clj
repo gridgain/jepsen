@@ -118,5 +118,4 @@
                      :debian debian/os
                      :noop jepsen.os/noop)
           :db      (db (:version options))
-          :pds     (:pds options)
           :nemesis (:nemesis options)}))
