@@ -32,7 +32,7 @@
 
 (defn invoke-op [^Ignite ignite [opcode k v]]
   "Perform a single operation in separate transaction."
-  (let [tx  (.transactions ignite)
+  (let [txn (.begin (.transactions ignite))
         sql (.sql ignite)]
     (if
       (= :r opcode)
@@ -47,19 +47,19 @@
                           (map #(Integer/parseInt %))
                           (into [])))
                    []))]
+          (.commit txn)
           [:r k select-result]))
-      (let [txn (.begin tx)]
-        (with-open [session   (.createSession sql)
-                    read-rs   (run-sql session txn sql-select [k])]
-          (if (.hasNext read-rs)
-            ; update existing list
-            (let [old-list    (.stringValue (.next read-rs) 1)
-                  new-list    (str old-list "," v)]
-              (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
-            ; create a new list
-            (do
-              (with-open [write-rs (run-sql session txn sql-insert [k (str v)])])))
-          (.commit txn))
+      (with-open [session   (.createSession sql)
+                  read-rs   (run-sql session txn sql-select [k])]
+        (if (.hasNext read-rs)
+          ; update existing list
+          (let [old-list    (.stringValue (.next read-rs) 1)
+                new-list    (str old-list "," v)]
+            (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
+          ; create a new list
+          (do
+            (with-open [write-rs (run-sql session txn sql-insert [k (str v)])])))
+        (.commit txn)
         [opcode k v]))))
 
 (defrecord Client [^Ignite ignite]
