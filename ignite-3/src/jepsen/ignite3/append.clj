@@ -41,7 +41,11 @@
                (with-open [session  (.createSession sql)
                            rs       (run-sql session sql-select [k])]
                  (if (.hasNext rs)
-                   (into [] (map #(Integer/parseInt %) (clojure.string/split (.stringValue (.next rs) 1) #",")))
+                   (let [raw-result (.stringValue (.next rs) 1)
+                         strings    (clojure.string/split raw-result #",")]
+                     (->> strings
+                          (map #(Integer/parseInt %))
+                          (into [])))
                    []))]
           [:r k select-result]))
       (let [txn (.begin tx)]
