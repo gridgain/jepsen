@@ -74,8 +74,6 @@
   (invoke! [this test op]
     ; (log/info "Received: " op)
     (let [ops   (:value op)
-          tx    (.transactions ignite)
-          sql   (.sql ignite)
           result (map #(invoke-op ignite %) ops)
           overall-result {:type :info, :f :txn, :value (into [] result)}]
       ; (log/info "Returned: " overall-result)
