@@ -112,8 +112,7 @@
   [options]
   (merge tests/noop-test
          (dissoc options :test-fns)
-         {:name    "basic-test"
-          :os      (case (:os options)
+         {:os      (case (:os options)
                      :centos centos/os
                      :debian debian/os
                      :noop jepsen.os/noop)
