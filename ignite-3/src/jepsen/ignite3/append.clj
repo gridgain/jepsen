@@ -23,34 +23,38 @@
 
 (def sql-select (str "select * from " table-name " where key = ?"))
 
+(defn run-sql
+  "Run a SQL query. Return ResultSet instance that should be closed afterwards."
+  ([session query params] (run-sql session nil query params))
+  ([session txn query params]
+    (log/info query params)
+    (.execute session txn query (object-array params))))
+
 (defn invoke-op [^Ignite ignite [opcode k v]]
-  "Perform a single operation in separate transaction"
+  "Perform a single operation in separate transaction."
   (let [tx  (.transactions ignite)
         sql (.sql ignite)]
     (if
       (= :r opcode)
       (do
-        ; (log/info sql-select k)
         (let [select-result
                (with-open [session  (.createSession sql)
-                           rs       (.execute session nil sql-select (into-array [k]))]
+                           rs       (run-sql session sql-select [k])]
                  (if (.hasNext rs)
                    (into [] (map #(Integer/parseInt %) (clojure.string/split (.stringValue (.next rs) 1) #",")))
                    []))]
           [:r k select-result]))
       (let [txn (.begin tx)]
         (with-open [session   (.createSession sql)
-                    read-rs   (.execute session txn sql-select (into-array [k]))]
+                    read-rs   (run-sql session txn sql-select [k])]
           (if (.hasNext read-rs)
             ; update existing list
             (let [old-list    (.stringValue (.next read-rs) 1)
                   new-list    (str old-list "," v)]
-              ; (log/info sql-update new-list k)
-              (with-open [write-rs (.execute session txn sql-update (object-array [new-list k]))]))
+              (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
             ; create a new list
             (do
-              ; (log/info sql-insert k v)
-              (with-open [write-rs (.execute session txn sql-insert (object-array [k (str v)]))])))
+              (with-open [write-rs (run-sql session txn sql-insert [k (str v)])])))
           (.commit txn))
         [opcode k v]))))
 
@@ -65,7 +69,7 @@
   (setup! [this test]
     (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
                 session (.createSession (.sql ignite))
-                rs (.execute session nil create-stmt (object-array []))]
+                rs (run-sql session create-stmt [])]
       (log/info "Table" table-name "created")))
   ;
   (invoke! [this test op]
