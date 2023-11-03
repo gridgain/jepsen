@@ -6,13 +6,10 @@
   value of the given list is). We detect cycles in these transactions using
   Jepsen's cycle-detection system."
   (:require [clojure.tools.logging :as log]
-            [jepsen [checker :as checker]
-                    [client :as client]
+            [jepsen [client :as client]
                     [ignite3 :as ignite3]
                     [nemesis :as nemesis]]
-            [jepsen.checker.timeline :as timeline]
-            [jepsen.tests.cycle.append :as app]
-            [knossos.model :as model])
+            [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite Ignite)
            (org.apache.ignite.client IgniteClient)))
 
