@@ -79,10 +79,9 @@
     ; (log/info "Received: " op)
     (let [ops   (:value op)
           result (map #(invoke-op ignite %) ops)
-          overall-result {:type     :info
-                          :f        :txn
-                          :process  (:process op)
-                          :value    (into [] result)}]
+          overall-result (assoc op
+                                :type :info
+                                :value (into [] result))]
       ; (log/info "Returned: " overall-result)
       overall-result))
   ;
