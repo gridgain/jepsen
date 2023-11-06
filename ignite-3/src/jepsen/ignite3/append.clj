@@ -38,7 +38,7 @@
       (= :r opcode)
       (let [select-result
               (with-open [session  (.createSession sql)
-                          rs       (run-sql session sql-select [k])]
+                          rs       (run-sql session txn sql-select [k])]
                 (if (.hasNext rs)
                   (let [raw-result (.stringValue (.next rs) 1)
                         strings    (clojure.string/split raw-result #",")]
@@ -79,7 +79,10 @@
     ; (log/info "Received: " op)
     (let [ops   (:value op)
           result (map #(invoke-op ignite %) ops)
-          overall-result {:type :info, :f :txn, :value (into [] result)}]
+          overall-result {:type     :info
+                          :f        :txn
+                          :process  (:process op)
+                          :value    (into [] result)}]
       ; (log/info "Returned: " overall-result)
       overall-result))
   ;
@@ -104,9 +107,9 @@
 (def c (client/open! (Client. nil) {} "127.0.0.1"))
 (client/setup! c {})
 
-(client/invoke! c {} {:type :invoke, :f :txn, :value [[:r 9 nil]]})
+(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 9 nil]]})
 
-(client/invoke! c {} {:type :invoke, :f :txn, :value [[:append 9 4]]})
+(client/invoke! c {} {:type :invoke, :process 1, :f :txn, :value [[:append 9 2]]})
 
 (client/close! c {})
 
