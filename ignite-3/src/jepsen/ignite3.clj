@@ -96,9 +96,10 @@
         (info node files)
         (into [] (.split files "\n"))))))
 
-(defn generator
-  [operations time-limit]
-  (->> (gen/mix operations)
+(defn wrap-generator
+  "Add default wrapper for generator (frequency, nemesis, time limit)."
+  [generator time-limit]
+  (->> generator
        (gen/stagger 1/10)
        (gen/nemesis
          (cycle [(gen/sleep 5)

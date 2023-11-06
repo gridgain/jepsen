@@ -3,6 +3,7 @@
   (:require [clojure.tools.logging :as log]
             [jepsen [checker :as checker]
                     [client :as client]
+                    [generator :as gen]
                     [ignite3 :as ignite3]
                     [independent :as independent]]
             [jepsen.checker.timeline :as timeline]
@@ -69,5 +70,7 @@
                     (checker/compose
                       {:linearizable (checker/linearizable {:model (model/cas-register)})
                        :timeline  (timeline/html)}))
-       :generator (ignite3/generator [r w cas] (:time-limit opts))}
+       :generator (ignite3/wrap-generator
+                    (gen/mix [r w cas])
+                    (:time-limit opts))}
       opts)))
