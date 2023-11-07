@@ -30,37 +30,46 @@
     (log/info query params)
     (.execute session txn query (object-array params))))
 
-(defn invoke-op [^Ignite ignite [opcode k v]]
+(defn read! [ignite txn [opcode k v]]
+  "Read value to the table by key, as list of numbers."
+  (let [r (with-open [session  (.createSession (.sql ignite))
+                      rs       (run-sql session txn sql-select [k])]
+            (if (.hasNext rs)
+              (let [raw-result (.stringValue (.next rs) 1)
+                    strings    (clojure.string/split raw-result #",")]
+                (->> strings
+                     (map #(Integer/parseInt %))
+                     (into [])))
+              []))]
+    [:r k r]))
+
+(defn append! [ignite txn [opcode k v]]
+  "Append value to the table by key."
+  (with-open [session   (.createSession (.sql ignite))
+              read-rs   (run-sql session txn sql-select [k])]
+    (if (.hasNext read-rs)
+      ; update existing list
+      (let [old-list    (.stringValue (.next read-rs) 1)
+            new-list    (str old-list "," v)]
+        (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
+      ; create a new list
+      (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
+    [opcode k v]))
+
+(defn invoke-in-tx! [^Ignite ignite txn op]
+  "Perform a single operation in a given transaction."
+  (case (first op)
+        :r
+        (read! ignite txn op)
+        :append
+        (append! ignite txn op)))
+
+(defn invoke-op [^Ignite ignite op]
   "Perform a single operation in separate transaction."
   (let [txn (.begin (.transactions ignite))
-        sql (.sql ignite)]
-    (case opcode
-      :r
-      (let [select-result
-              (with-open [session  (.createSession sql)
-                          rs       (run-sql session txn sql-select [k])]
-                (if (.hasNext rs)
-                  (let [raw-result (.stringValue (.next rs) 1)
-                        strings    (clojure.string/split raw-result #",")]
-                    (->> strings
-                         (map #(Integer/parseInt %))
-                         (into [])))
-                  []))]
-        (.commit txn)
-        [:r k select-result])
-      :append
-      (with-open [session   (.createSession sql)
-                  read-rs   (run-sql session txn sql-select [k])]
-        (if (.hasNext read-rs)
-          ; update existing list
-          (let [old-list    (.stringValue (.next read-rs) 1)
-                new-list    (str old-list "," v)]
-            (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
-          ; create a new list
-          (do
-            (with-open [write-rs (run-sql session txn sql-insert [k (str v)])])))
-        (.commit txn)
-        [opcode k v]))))
+        result (invoke-in-tx! ignite txn op)]
+    (.commit txn)
+    result))
 
 (defrecord Client [^Ignite ignite]
   client/Client
