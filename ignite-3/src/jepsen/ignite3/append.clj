@@ -16,7 +16,7 @@
 
 (def table-name "APPEND")
 
-(def max-attempts 10)
+(def max-attempts 20)
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
 
