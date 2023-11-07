@@ -12,7 +12,8 @@
             [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite Ignite)
            (org.apache.ignite.client IgniteClient)
-           (org.apache.ignite.lang IgniteException)))
+           (org.apache.ignite.lang IgniteException)
+           (org.apache.ignite.tx TransactionException)))
 
 (def table-name "APPEND")
 
@@ -80,7 +81,11 @@
                  (catch IgniteException ie
                    (if (.contains (.getMessage ie) "Failed to acquire a lock")
                      nil
-                     (throw ie))))]
+                     (throw ie)))
+                 (catch TransactionException te
+                   (if (.contains (.getMessage te) "Replication is timed out")
+                     nil
+                     (throw te))))]
       r
       (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" op)
           (if-not (< attempt max-attempts)
