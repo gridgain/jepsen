@@ -11,9 +11,12 @@
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite Ignite)
-           (org.apache.ignite.client IgniteClient)))
+           (org.apache.ignite.client IgniteClient)
+           (org.apache.ignite.lang IgniteException)))
 
 (def table-name "APPEND")
+
+(def max-attempts 10)
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
 
@@ -68,6 +71,21 @@
     (.commit txn)
     result))
 
+(defn invoke-with-retries [^Ignite ignite op]
+  "Perform a single operation with repeats on IgniteException, each time in a new transaction."
+  (loop [attempt 1]
+    (if-let [r (try
+                 (invoke-op ignite op)
+                 (catch IgniteException ie
+                   (if (.contains (.getMessage ie) "Failed to acquire a lock")
+                     nil
+                     (throw ie))))]
+      r
+      (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" op)
+          (if-not (< attempt max-attempts)
+            nil
+            (recur (inc attempt)))))))
+
 (defrecord Client [^Ignite ignite]
   client/Client
   ;
@@ -85,7 +103,7 @@
   (invoke! [this test op]
     ; (log/info "Received: " op)
     (let [ops   (:value op)
-          result (map #(invoke-op ignite %) ops)
+          result (map #(invoke-with-retries ignite %) ops)
           overall-result (assoc op
                                 :type :info
                                 :value (into [] result))]
