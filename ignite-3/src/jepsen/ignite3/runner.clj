@@ -1,15 +1,17 @@
 (ns jepsen.ignite3.runner
   "Runs Apache Ignite 3 tests."
   (:gen-class)
-  (:require [clojure.pprint :refer [pprint]]
-            [clojure.tools.logging :refer :all]
-            [jepsen.cli :as jc]
-            [jepsen.core :as jepsen]
-            [jepsen.ignite3.register :as register]))
+  (:require [clojure.pprint             :refer [pprint]]
+            [clojure.tools.logging      :refer :all]
+            [jepsen.cli                 :as jc]
+            [jepsen.core                :as jepsen]
+            [jepsen.ignite3.append      :as append]
+            [jepsen.ignite3.register    :as register]))
 
 (def tests
   "A map of test names to test constructors."
-  {"register" register/test})
+  {"append"     append/append-test
+   "register"   register/register-test})
 
 (def nemesis-types
   {"noop"                   jepsen.nemesis/noop})
@@ -35,7 +37,7 @@
 
 (defn log-test
   [t]
-  (info "Testing\n" (with-out-str (pprint t)))
+  (binding [*print-length* 100] (info "Testing\n" (with-out-str (pprint t))))
   t)
 
 (defn test-cmd
@@ -48,7 +50,6 @@
                                              :test :test-fns})))
            :usage (jc/test-usage)
            :run (fn [{:keys [options]}]
-                  (pprint options)
                   (doseq [i        (range (:test-count options))
                           test-fn  (:test-fns options)]
                     ; Rehydrate test and run

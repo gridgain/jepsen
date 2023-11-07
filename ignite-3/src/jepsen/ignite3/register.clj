@@ -3,6 +3,7 @@
   (:require [clojure.tools.logging :as log]
             [jepsen [checker :as checker]
                     [client :as client]
+                    [generator :as gen]
                     [ignite3 :as ignite3]
                     [independent :as independent]]
             [jepsen.checker.timeline :as timeline]
@@ -11,7 +12,7 @@
 
 (def table-name "REGISTER")
 
-(def key "k")
+(def common-key "k")
 
 (def sql-create (str"create table if not exists " table-name "(key varchar primary key, val int)"))
 
@@ -45,21 +46,21 @@
     (try
       (case (:f op)
         :read (let [kv-view (.keyValueView (.table (.tables ignite) table-name) String Integer)
-                    value (.get kv-view nil key)]
+                    value (.get kv-view nil common-key)]
                 (assoc op :type :ok :value value))
         :write (let [kv-view (.keyValueView (.table (.tables ignite) table-name) String Integer)]
-                 (.put kv-view nil key (:value op))
+                 (.put kv-view nil common-key (:value op))
                  (assoc op :type :ok))
         :cas (let [kv-view (.keyValueView (.table (.tables ignite) table-name) String Integer)
                    [value value'] (:value op)]
-               (assoc op :type (if (.replace kv-view nil key value value') :ok :fail))))))
+               (assoc op :type (if (.replace kv-view nil common-key value value') :ok :fail))))))
 
   (teardown! [this test])
 
   (close! [this test]
     (.close ignite)))
 
-(defn test
+(defn register-test
   [opts]
   (ignite3/basic-test
     (merge
@@ -69,5 +70,7 @@
                     (checker/compose
                       {:linearizable (checker/linearizable {:model (model/cas-register)})
                        :timeline  (timeline/html)}))
-       :generator (ignite3/generator [r w cas] (:time-limit opts))}
+       :generator (ignite3/wrap-generator
+                    (gen/mix [r w cas])
+                    (:time-limit opts))}
       opts)))

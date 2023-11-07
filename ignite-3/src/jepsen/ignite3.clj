@@ -96,29 +96,26 @@
         (info node files)
         (into [] (.split files "\n"))))))
 
-(defn generator
-  [operations time-limit]
-  (->> (gen/mix operations)
+(defn wrap-generator
+  "Add default wrapper for generator (frequency, nemesis, time limit)."
+  [generator time-limit]
+  (->> generator
        (gen/stagger 1/10)
        (gen/nemesis
-         ; without "take 100", we fail into infinity here (most probably, during print)
-         (take 100 (cycle [(gen/sleep 5)
-                           {:type :info, :f :start}
-                           (gen/sleep 1)
-                           {:type :info, :f :stop}])))
+         (cycle [(gen/sleep 5)
+                 {:type :info, :f :start}
+                 (gen/sleep 1)
+                 {:type :info, :f :stop}]))
        (gen/time-limit time-limit)))
 
 (defn basic-test
   "Sets up the test parameters common to all tests."
   [options]
-  (info :opts options)
   (merge tests/noop-test
          (dissoc options :test-fns)
-         {:name    "basic-test"
-          :os      (case (:os options)
+         {:os      (case (:os options)
                      :centos centos/os
                      :debian debian/os
                      :noop jepsen.os/noop)
           :db      (db (:version options))
-          :pds     (:pds options)
           :nemesis (:nemesis options)}))
