@@ -34,8 +34,8 @@
   "Perform a single operation in separate transaction."
   (let [txn (.begin (.transactions ignite))
         sql (.sql ignite)]
-    (if
-      (= :r opcode)
+    (case opcode
+      :r
       (let [select-result
               (with-open [session  (.createSession sql)
                           rs       (run-sql session txn sql-select [k])]
@@ -48,6 +48,7 @@
                   []))]
         (.commit txn)
         [:r k select-result])
+      :append
       (with-open [session   (.createSession sql)
                   read-rs   (run-sql session txn sql-select [k])]
         (if (.hasNext read-rs)
