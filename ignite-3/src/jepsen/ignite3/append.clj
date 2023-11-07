@@ -39,6 +39,7 @@
                       rs        (run-sql session txn sql-select [k])]
             (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
               (->> (clojure.string/split s #",")
+                 (remove #(.isEmpty %))
                  (map #(Integer/parseInt %))
                  (into []))))]
     [:r k r]))
