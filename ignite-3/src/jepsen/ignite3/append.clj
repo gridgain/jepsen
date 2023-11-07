@@ -30,7 +30,7 @@
     (log/info query params)
     (.execute session txn query (object-array params))))
 
-(defn read! [ignite txn [opcode k v]]
+(defn read! [ignite txn [_ k _]]
   "Read value to the table by key, as list of numbers."
   (let [r (with-open [session   (.createSession (.sql ignite))
                       rs        (run-sql session txn sql-select [k])]
