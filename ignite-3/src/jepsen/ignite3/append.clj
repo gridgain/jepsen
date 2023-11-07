@@ -32,15 +32,12 @@
 
 (defn read! [ignite txn [opcode k v]]
   "Read value to the table by key, as list of numbers."
-  (let [r (with-open [session  (.createSession (.sql ignite))
-                      rs       (run-sql session txn sql-select [k])]
-            (if (.hasNext rs)
-              (let [raw-result (.stringValue (.next rs) 1)
-                    strings    (clojure.string/split raw-result #",")]
-                (->> strings
-                     (map #(Integer/parseInt %))
-                     (into [])))
-              []))]
+  (let [r (with-open [session   (.createSession (.sql ignite))
+                      rs        (run-sql session txn sql-select [k])]
+            (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
+              (->> (clojure.string/split s #",")
+                 (map #(Integer/parseInt %))
+                 (into []))))]
     [:r k r]))
 
 (defn append! [ignite txn [opcode k v]]
