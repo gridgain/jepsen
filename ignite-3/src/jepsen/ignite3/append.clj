@@ -90,17 +90,6 @@
   (close! [this test]
     (.close ignite)))
 
-(def pseudo-noop
-  "Does nothing but logging."
-  (reify nemesis/Nemesis
-    (setup! [this test] this)
-    (invoke! [this test op]
-      ; (log/info "Nemesis received" op)
-      (assoc op :type :info))
-    (teardown! [this test] this)
-    nemesis/Reflection
-    (fs [this] #{})))
-
 (comment "for repl"
 
 (def c (client/open! (Client. nil) {} "127.0.0.1"))
