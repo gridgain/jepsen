@@ -75,7 +75,7 @@
     (if-let [r (try
                  (invoke-op ignite op)
                  (catch TransactionException te
-                   (log/warn "TransactionException:" (.getMessage te)))
+                   (log/info "TransactionException:" (.getMessage te)))
                  (catch IgniteException ie
                    (if (.contains (.getMessage ie) "Failed to acquire a lock")
                      nil
