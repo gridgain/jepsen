@@ -75,7 +75,9 @@
     (if-let [r (try
                  (invoke-op ignite op)
                  (catch TransactionException te
-                   (log/warn "TransactionException:" (.getMessage te)))
+                   (if (.contains (.getMessage te) "Replication is timed out")
+                     nil
+                     (throw te)))
                  (catch IgniteException ie
                    (if (.contains (.getMessage ie) "Failed to acquire a lock")
                      nil
