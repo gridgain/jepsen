@@ -25,7 +25,9 @@
 
 (def sql-update (str "update " table-name " set vals = ? where key = ?"))
 
-(def sql-select (str "select * from " table-name " where key = ?"))
+(def sql-select-all (str "select * from " table-name))
+
+(def sql-select (str sql-select-all " where key = ?"))
 
 (defn run-sql
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
@@ -86,6 +88,15 @@
               (Thread/sleep 50)
               (recur (inc attempt))))))))
 
+(defn print-table-content [ignite]
+  "Save resulting table content in the log."
+  (with-open [session (.createSession (.sql ignite))
+              rs (run-sql session sql-select-all [])]
+    (log/info "Table content")
+    (while (.hasNext rs)
+      (let [row (.next rs)]
+        (log/info (.intValue row 0) ":" (.stringValue row 1))))))
+
 (defrecord Client [^Ignite ignite]
   client/Client
   ;
@@ -108,7 +119,7 @@
                                 :value (into [] result))]
       overall-result))
   ;
-  (teardown! [this test])
+  (teardown! [this test] (print-table-content ignite))
   ;
   (close! [this test]
     (.close ignite)))
@@ -118,9 +129,11 @@
 (def c (client/open! (Client. nil) {} "127.0.0.1"))
 (client/setup! c {})
 
-(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 9 nil]]})
+(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil]]})
 
 (client/invoke! c {} {:type :invoke, :process 1, :f :txn, :value [[:append 9 2]]})
+
+(client/teardown! c {})
 
 (client/close! c {})
 
