@@ -92,7 +92,6 @@
   client/Client
   ;
   (open! [this test node]
-    ; (log/info "Node: " node)
     (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))]
       (assoc this :ignite ignite)))
   ;
@@ -103,13 +102,12 @@
       (log/info "Table" table-name "created")))
   ;
   (invoke! [this test op]
-    ; (log/info "Received: " op)
     (let [ops   (:value op)
+          ; result (map #(invoke-op ignite %) ops)
           result (map #(invoke-with-retries ignite %) ops)
           overall-result (assoc op
                                 :type :info
                                 :value (into [] result))]
-      ; (log/info "Returned: " overall-result)
       overall-result))
   ;
   (teardown! [this test])
