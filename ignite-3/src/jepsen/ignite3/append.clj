@@ -83,8 +83,10 @@
       r
       (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" op)
           (if-not (< attempt max-attempts)
-            nil
-            (recur (inc attempt)))))))
+            (throw (RuntimeException. (str "Await exhausted after " max-attempts " attempts")))
+            (do
+              (Thread/sleep 50)
+              (recur (inc attempt))))))))
 
 (defrecord Client [^Ignite ignite]
   client/Client
