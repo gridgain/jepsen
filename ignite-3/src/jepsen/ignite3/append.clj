@@ -58,18 +58,12 @@
       (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
     [opcode k v]))
 
-(defn invoke-in-tx! [^Ignite ignite txn op]
-  "Perform a single operation in a given transaction."
-  (case (first op)
-        :r
-        (read! ignite txn op)
-        :append
-        (append! ignite txn op)))
+(def select-op {:r read! :append append!})
 
 (defn invoke-op [^Ignite ignite op]
   "Perform a single operation in separate transaction."
   (let [txn (.begin (.transactions ignite))
-        result (invoke-in-tx! ignite txn op)]
+        result ((get select-op (first op)) ignite txn op)]
     (.commit txn)
     result))
 
