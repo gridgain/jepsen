@@ -72,14 +72,12 @@
   (loop [attempt 1]
     (if-let [r (try
                  (invoke-op ignite op)
+                 (catch TransactionException te
+                   (log/warn "TransactionException:" (.getMessage te)))
                  (catch IgniteException ie
                    (if (.contains (.getMessage ie) "Failed to acquire a lock")
                      nil
-                     (throw ie)))
-                 (catch TransactionException te
-                   (if (.contains (.getMessage te) "Replication is timed out")
-                     nil
-                     (throw te))))]
+                     (throw ie))))]
       r
       (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" op)
           (if-not (< attempt max-attempts)
