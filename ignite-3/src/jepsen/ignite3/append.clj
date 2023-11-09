@@ -63,10 +63,10 @@
 (defn invoke-ops [^Ignite ignite ops]
   "Perform operations in a transaction."
   (let [txn (.begin (.transactions ignite))
-        result (map #(case (first %)
-                       :r       (read! ignite txn %)
-                       :append  (append! ignite txn %))
-                    ops)]
+        result (mapv #(case (first %)
+                        :r       (read! ignite txn %)
+                        :append  (append! ignite txn %))
+                     ops)]
     (.commit txn)
     result))
 
@@ -130,7 +130,7 @@
 (def c (client/open! (Client. nil) {} "127.0.0.1"))
 (client/setup! c {})
 
-(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil]]})
+(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil] [:r 6 nil]]})
 
 (client/invoke! c {} {:type :invoke, :process 1, :f :txn, :value [[:append 9 2]]})
 
