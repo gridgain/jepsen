@@ -60,20 +60,21 @@
       (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
     [opcode k v]))
 
-(def select-op {:r read! :append append!})
-
-(defn invoke-op [^Ignite ignite op]
-  "Perform a single operation in separate transaction."
+(defn invoke-ops [^Ignite ignite ops]
+  "Perform operations in a transaction."
   (let [txn (.begin (.transactions ignite))
-        result ((get select-op (first op)) ignite txn op)]
+        result (map #(case (first %)
+                       :r       (read! ignite txn %)
+                       :append  (append! ignite txn %))
+                    ops)]
     (.commit txn)
     result))
 
-(defn invoke-with-retries [^Ignite ignite op]
-  "Perform a single operation with repeats on IgniteException, each time in a new transaction."
+(defn invoke-with-retries [^Ignite ignite ops]
+  "Perform operations with repeats on IgniteException, each time in a new transaction."
   (loop [attempt 1]
     (if-let [r (try
-                 (invoke-op ignite op)
+                 (invoke-ops ignite ops)
                  (catch TransactionException te
                    (log/info "TransactionException:" (.getMessage te)))
                  (catch IgniteException ie
@@ -81,7 +82,7 @@
                      nil
                      (throw ie))))]
       r
-      (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" op)
+      (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" ops)
           (if-not (< attempt max-attempts)
             (throw (RuntimeException. (str "Await exhausted after " max-attempts " attempts")))
             (do
@@ -112,8 +113,8 @@
   ;
   (invoke! [this test op]
     (let [ops   (:value op)
-          ; result (map #(invoke-op ignite %) ops)
-          result (map #(invoke-with-retries ignite %) ops)
+          ; result (invoke-ops ignite ops)
+          result (invoke-with-retries ignite ops)
           overall-result (assoc op
                                 :type :info
                                 :value (into [] result))]
