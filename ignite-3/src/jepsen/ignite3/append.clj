@@ -145,7 +145,7 @@
   [opts]
   (ignite3/basic-test
     (merge
-      (let [test-ops {:consistency-models [:serializable]}]
+      (let [test-ops {:consistency-models [:strict-serializable]}]
         {:name      "append-test"
          :client    (Client. nil)
          :checker   (app/checker test-ops)
