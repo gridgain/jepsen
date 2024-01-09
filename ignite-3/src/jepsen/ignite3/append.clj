@@ -29,12 +29,42 @@
 
 (def sql-select (str sql-select-all " where key = ?"))
 
+(defprotocol Accessor
+  "Provide transactional access to Ignite3 DB for read and append."
+  (read!   [this ignite txn [opcode k v]] "Read value to the table by key, as list of numbers.")
+  (append! [this ignite txn [opcode k v]] "Append value to the table by key."))
+
 (defn run-sql
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
   ([session query params] (run-sql session nil query params))
   ([session txn query params]
     (log/info query params)
     (.execute session txn query (object-array params))))
+
+(deftype SqlAccessor []
+  Accessor
+  ;
+  (read! [this ignite txn [opcode k v]]
+    (let [r (with-open [session   (.createSession (.sql ignite))
+                        rs        (run-sql session txn sql-select [k])]
+              (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
+                (->> (clojure.string/split s #",")
+                     (remove #(.isEmpty %))
+                     (map #(Integer/parseInt %))
+                     (into []))))]
+      [:r k r]))
+  ;
+  (append! [this ignite txn [opcode k v]]
+    (with-open [session   (.createSession (.sql ignite))
+                read-rs   (run-sql session txn sql-select [k])]
+      (if (.hasNext read-rs)
+        ; update existing list
+        (let [old-list    (.stringValue (.next read-rs) 1)
+              new-list    (str old-list "," v)]
+          (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
+        ; create a new list
+        (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
+      [opcode k v])))
 
 (defn read! [ignite txn [_ k _]]
   "Read value to the table by key, as list of numbers."
