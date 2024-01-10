@@ -13,6 +13,7 @@
   (:import (org.apache.ignite Ignite)
            (org.apache.ignite.client IgniteClient)
            (org.apache.ignite.lang IgniteException)
+           (org.apache.ignite.table.mapper Mapper)
            (org.apache.ignite.tx TransactionException)))
 
 (def table-name "APPEND")
@@ -41,6 +42,15 @@
     (log/info query params)
     (.execute session txn query (object-array params))))
 
+(defn as-int-list [s]
+  "Convert a string representation of integers into an actual list of integers.
+   Empty string or nil are converted into an empty list.
+   Non-integer content (including spaces) leads to parsing exception."
+  (let [s' (if (some? s) s "")]
+    (->> (clojure.string/split s' #",")
+         (remove #(.isEmpty %))
+         (mapv #(Integer/parseInt %)))))
+
 (deftype SqlAccessor []
   Accessor
   ;
@@ -48,10 +58,7 @@
     (let [r (with-open [session   (.createSession (.sql ignite))
                         rs        (run-sql session txn sql-select [k])]
               (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
-                (->> (clojure.string/split s #",")
-                     (remove #(.isEmpty %))
-                     (map #(Integer/parseInt %))
-                     (into []))))]
+                (as-int-list s)))]
       [:r k r]))
   ;
   (append! [this ignite txn [opcode k v]]
@@ -64,6 +71,29 @@
           (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
         ; create a new list
         (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
+      [opcode k v])))
+
+(defn kv-view [^Ignite ignite]
+  "Create KV view for APPEND table."
+  (.keyValueView (.table (.tables ignite) table-name)
+                 (Mapper/of Integer)
+                 (Mapper/of String)))
+
+(deftype KeyValueAccessor []
+  Accessor
+  ;
+  (read! [this ignite txn [opcode k v]]
+    (let [view      (kv-view ignite)
+          value     (as-int-list (.get view txn (int k)))]
+      [:r k value]))
+  ;
+  (append! [this ignite txn [opcode k v]]
+    (let [view      (kv-view ignite)
+          old-value (.get view txn (int k))
+          new-value (if (some? old-value)
+                      (str old-value "," v)
+                      (str v))]
+      (.put view txn (int k) new-value)
       [opcode k v])))
 
 (defn invoke-ops [^Ignite ignite acc ops]
@@ -133,12 +163,14 @@
 
 (comment "for repl"
 
-(def c (client/open! (Client. nil (SqlAccessor.)) {} "127.0.0.1"))
+(def c (client/open! (Client. nil (KeyValueAccessor.)) {} "127.0.0.1"))
 (client/setup! c {})
 
 (client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil] [:r 6 nil]]})
 
 (client/invoke! c {} {:type :invoke, :process 1, :f :txn, :value [[:append 9 2]]})
+
+(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 9 nil]]})
 
 (client/teardown! c {})
 
