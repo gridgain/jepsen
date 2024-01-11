@@ -16,19 +16,15 @@
            (org.apache.ignite.table.mapper Mapper)
            (org.apache.ignite.tx TransactionException)))
 
+; ---------- Common definitions ----------
+
 (def table-name "APPEND")
 
 (def max-attempts 20)
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
 
-(def sql-insert (str "insert into " table-name " (key, vals) values (?, ?)"))
-
-(def sql-update (str "update " table-name " set vals = ? where key = ?"))
-
 (def sql-select-all (str "select * from " table-name))
-
-(def sql-select (str sql-select-all " where key = ?"))
 
 (defprotocol Accessor
   "Provide transactional access to Ignite3 DB for read and append."
@@ -50,6 +46,14 @@
     (->> (clojure.string/split s' #",")
          (remove #(.isEmpty %))
          (mapv #(Integer/parseInt %)))))
+
+; ---------- SQL Access ----------
+
+(def sql-select (str sql-select-all " where key = ?"))
+
+(def sql-update (str "update " table-name " set vals = ? where key = ?"))
+
+(def sql-insert (str "insert into " table-name " (key, vals) values (?, ?)"))
 
 (deftype SqlAccessor []
   Accessor
@@ -73,6 +77,8 @@
         (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
       [opcode k v])))
 
+; ---------- KV Access ----------
+
 (defn kv-view [^Ignite ignite]
   "Create KV view for APPEND table."
   (.keyValueView (.table (.tables ignite) table-name)
@@ -95,6 +101,8 @@
                       (str v))]
       (.put view txn (int k) new-value)
       [opcode k v])))
+
+; ---------- General scenario ----------
 
 (defn invoke-ops [^Ignite ignite acc ops]
   "Perform operations in a transaction."
