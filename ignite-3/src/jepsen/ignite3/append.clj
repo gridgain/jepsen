@@ -187,13 +187,17 @@
 "/for repl"
 )
 
+(def accessors
+  {"sql" (SqlAccessor.)
+   "kv"  (KeyValueAccessor.)})
+
 (defn append-test
   [opts]
   (ignite3/basic-test
     (merge
       (let [test-ops {:consistency-models [:strict-serializable]}]
         {:name      "append-test"
-         :client    (Client. nil (SqlAccessor.))
+         :client    (Client. nil (get accessors (:accessor opts)))
          :checker   (app/checker test-ops)
          :generator (ignite3/wrap-generator (app/gen test-ops) (:time-limit opts))})
       opts)))
