@@ -29,6 +29,9 @@
    [nil "--url URL" "URL to Ignite zip to install, has precedence over --version"
     :default nil
     :parse-fn str]
+   ["-a" "--accessor ACCESSOR" (str "Accesor type, for append test only " (keys append/accessors))
+    :default (first (keys append/accessors))
+    :validate [(set (keys append/accessors)) (jc/one-of append/accessors)]]
    ["-nemesis" "--nemesis Nemesis"
     "What Nemesis to use"
     :default jepsen.nemesis/noop

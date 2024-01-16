@@ -13,7 +13,10 @@
   (:import (org.apache.ignite Ignite)
            (org.apache.ignite.client IgniteClient)
            (org.apache.ignite.lang IgniteException)
+           (org.apache.ignite.table.mapper Mapper)
            (org.apache.ignite.tx TransactionException)))
+
+; ---------- Common definitions ----------
 
 (def table-name "APPEND")
 
@@ -21,13 +24,12 @@
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
 
-(def sql-insert (str "insert into " table-name " (key, vals) values (?, ?)"))
-
-(def sql-update (str "update " table-name " set vals = ? where key = ?"))
-
 (def sql-select-all (str "select * from " table-name))
 
-(def sql-select (str sql-select-all " where key = ?"))
+(defprotocol Accessor
+  "Provide transactional access to Ignite3 DB for read and append."
+  (read!   [this ignite txn [opcode k v]] "Read value to the table by key, as list of numbers.")
+  (append! [this ignite txn [opcode k v]] "Append value to the table by key."))
 
 (defn run-sql
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
@@ -36,45 +38,87 @@
     (log/info query params)
     (.execute session txn query (object-array params))))
 
-(defn read! [ignite txn [_ k _]]
-  "Read value to the table by key, as list of numbers."
-  (let [r (with-open [session   (.createSession (.sql ignite))
-                      rs        (run-sql session txn sql-select [k])]
-            (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
-              (->> (clojure.string/split s #",")
-                   (remove #(.isEmpty %))
-                   (map #(Integer/parseInt %))
-                   (into []))))]
-    [:r k r]))
+(defn as-int-list [s]
+  "Convert a string representation of integers into an actual list of integers.
+   Empty string or nil are converted into an empty list.
+   Non-integer content (including spaces) leads to parsing exception."
+  (let [s' (if (some? s) s "")]
+    (->> (clojure.string/split s' #",")
+         (remove #(.isEmpty %))
+         (mapv #(Integer/parseInt %)))))
 
-(defn append! [ignite txn [opcode k v]]
-  "Append value to the table by key."
-  (with-open [session   (.createSession (.sql ignite))
-              read-rs   (run-sql session txn sql-select [k])]
-    (if (.hasNext read-rs)
-      ; update existing list
-      (let [old-list    (.stringValue (.next read-rs) 1)
-            new-list    (str old-list "," v)]
-        (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
-      ; create a new list
-      (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
-    [opcode k v]))
+; ---------- SQL Access ----------
 
-(defn invoke-ops [^Ignite ignite ops]
+(def sql-select (str sql-select-all " where key = ?"))
+
+(def sql-update (str "update " table-name " set vals = ? where key = ?"))
+
+(def sql-insert (str "insert into " table-name " (key, vals) values (?, ?)"))
+
+(deftype SqlAccessor []
+  Accessor
+  ;
+  (read! [this ignite txn [opcode k v]]
+    (let [r (with-open [session   (.createSession (.sql ignite))
+                        rs        (run-sql session txn sql-select [k])]
+              (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
+                (as-int-list s)))]
+      [:r k r]))
+  ;
+  (append! [this ignite txn [opcode k v]]
+    (with-open [session   (.createSession (.sql ignite))
+                read-rs   (run-sql session txn sql-select [k])]
+      (if (.hasNext read-rs)
+        ; update existing list
+        (let [old-list    (.stringValue (.next read-rs) 1)
+              new-list    (str old-list "," v)]
+          (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
+        ; create a new list
+        (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
+      [opcode k v])))
+
+; ---------- KV Access ----------
+
+(defn kv-view [^Ignite ignite]
+  "Create KV view for APPEND table."
+  (.keyValueView (.table (.tables ignite) table-name)
+                 (Mapper/of Integer)
+                 (Mapper/of String)))
+
+(deftype KeyValueAccessor []
+  Accessor
+  ;
+  (read! [this ignite txn [opcode k v]]
+    (let [view      (kv-view ignite)
+          value     (as-int-list (.get view txn (int k)))]
+      [:r k value]))
+  ;
+  (append! [this ignite txn [opcode k v]]
+    (let [view      (kv-view ignite)
+          old-value (.get view txn (int k))
+          new-value (if (some? old-value)
+                      (str old-value "," v)
+                      (str v))]
+      (.put view txn (int k) new-value)
+      [opcode k v])))
+
+; ---------- General scenario ----------
+
+(defn invoke-ops [^Ignite ignite acc ops]
   "Perform operations in a transaction."
   (let [txn (.begin (.transactions ignite))
         result (mapv #(case (first %)
-                        :r       (read! ignite txn %)
-                        :append  (append! ignite txn %))
+                        :r       (read! acc ignite txn %)
+                        :append  (append! acc ignite txn %))
                      ops)]
     (.commit txn)
     result))
 
-(defn invoke-with-retries [^Ignite ignite ops]
+(defn invoke-with-retries [^Ignite ignite acc ops]
   "Perform operations with repeats on IgniteException, each time in a new transaction."
   (loop [attempt 1]
     (if-let [r (try
-                 (invoke-ops ignite ops)
+                 (invoke-ops ignite acc ops)
                  (catch TransactionException te
                    (log/info "TransactionException:" (.getMessage te)))
                  (catch IgniteException ie
@@ -98,7 +142,7 @@
       (let [row (.next rs)]
         (log/info (.intValue row 0) ":" (.stringValue row 1))))))
 
-(defrecord Client [^Ignite ignite]
+(defrecord Client [^Ignite ignite acc]
   client/Client
   ;
   (open! [this test node]
@@ -113,8 +157,8 @@
   ;
   (invoke! [this test op]
     (let [ops   (:value op)
-          ; result (invoke-ops ignite ops)
-          result (invoke-with-retries ignite ops)
+          ; result (invoke-ops ignite acc ops)
+          result (invoke-with-retries ignite acc ops)
           overall-result (assoc op
                                 :type :info
                                 :value (into [] result))]
@@ -127,12 +171,14 @@
 
 (comment "for repl"
 
-(def c (client/open! (Client. nil) {} "127.0.0.1"))
+(def c (client/open! (Client. nil (KeyValueAccessor.)) {} "127.0.0.1"))
 (client/setup! c {})
 
 (client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil] [:r 6 nil]]})
 
 (client/invoke! c {} {:type :invoke, :process 1, :f :txn, :value [[:append 9 2]]})
+
+(client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 9 nil]]})
 
 (client/teardown! c {})
 
@@ -141,13 +187,17 @@
 "/for repl"
 )
 
+(def accessors
+  {"sql" (SqlAccessor.)
+   "kv"  (KeyValueAccessor.)})
+
 (defn append-test
   [opts]
   (ignite3/basic-test
     (merge
       (let [test-ops {:consistency-models [:strict-serializable]}]
         {:name      "append-test"
-         :client    (Client. nil)
+         :client    (Client. nil (get accessors (:accessor opts)))
          :checker   (app/checker test-ops)
          :generator (ignite3/wrap-generator (app/gen test-ops) (:time-limit opts))})
       opts)))
