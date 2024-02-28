@@ -11,7 +11,7 @@
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite Ignite)
-           (org.apache.ignite.client IgniteClient)
+           (org.apache.ignite.client IgniteClient RetryLimitPolicy)
            (org.apache.ignite.lang IgniteException)
            (org.apache.ignite.table.mapper Mapper)
            (org.apache.ignite.tx TransactionException)))
@@ -146,7 +146,10 @@
   client/Client
   ;
   (open! [this test node]
-    (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))]
+    (let [ignite (-> (IgniteClient/builder)
+                     (.addresses (into-array [(str node ":10800")]))
+                     (.retryPolicy (.retryLimit (RetryLimitPolicy.) 3))
+                     (.build))]
       (assoc this :ignite ignite)))
   ;
   (setup! [this test]
