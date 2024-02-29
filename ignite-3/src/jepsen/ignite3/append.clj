@@ -127,7 +127,7 @@
   (open! [this test node]
     (let [ignite (-> (IgniteClient/builder)
                      (.addresses (into-array [(str node ":10800")]))
-                     (.retryPolicy (.retryLimit (RetryLimitPolicy.) 3))
+                     (.retryPolicy (RetryLimitPolicy.))
                      (.build))]
       (assoc this :ignite ignite)))
   ;
