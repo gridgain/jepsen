@@ -22,6 +22,9 @@
    ["-v" "--version VERSION"
     "What version of Apache Ignite to install"
     :default "3.0.0-SNAPSHOT"]
+   ["-f" "--flavour FLAVOUR"
+    "What flavour of product to install"
+    :default "ignite3"]
    ["-o" "--os NAME" "Operating system: either centos, debian, or noop."
     :default  :noop
     :parse-fn keyword

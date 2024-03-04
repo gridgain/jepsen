@@ -11,10 +11,8 @@
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite Ignite)
-           (org.apache.ignite.client IgniteClient)
-           (org.apache.ignite.lang IgniteException)
-           (org.apache.ignite.table.mapper Mapper)
-           (org.apache.ignite.tx TransactionException)))
+           (org.apache.ignite.client IgniteClient RetryLimitPolicy)
+           (org.apache.ignite.table.mapper Mapper)))
 
 ; ---------- Common definitions ----------
 
@@ -114,25 +112,6 @@
     (.commit txn)
     result))
 
-(defn invoke-with-retries [^Ignite ignite acc ops]
-  "Perform operations with repeats on IgniteException, each time in a new transaction."
-  (loop [attempt 1]
-    (if-let [r (try
-                 (invoke-ops ignite acc ops)
-                 (catch TransactionException te
-                   (log/info "TransactionException:" (.getMessage te)))
-                 (catch IgniteException ie
-                   (if (.contains (.getMessage ie) "Failed to acquire a lock")
-                     nil
-                     (throw ie))))]
-      r
-      (do (log/info "Failed attempt" (str attempt "/" max-attempts) "for" ops)
-          (if-not (< attempt max-attempts)
-            (throw (RuntimeException. (str "Await exhausted after " max-attempts " attempts")))
-            (do
-              (Thread/sleep 50)
-              (recur (inc attempt))))))))
-
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
   (with-open [session (.createSession (.sql ignite))
@@ -146,7 +125,10 @@
   client/Client
   ;
   (open! [this test node]
-    (let [ignite (.build (.addresses (IgniteClient/builder) (into-array [(str node ":10800")])))]
+    (let [ignite (-> (IgniteClient/builder)
+                     (.addresses (into-array [(str node ":10800")]))
+                     (.retryPolicy (RetryLimitPolicy.))
+                     (.build))]
       (assoc this :ignite ignite)))
   ;
   (setup! [this test]
@@ -157,8 +139,7 @@
   ;
   (invoke! [this test op]
     (let [ops   (:value op)
-          ; result (invoke-ops ignite acc ops)
-          result (invoke-with-retries ignite acc ops)
+          result (invoke-ops ignite acc ops)
           overall-result (assoc op
                                 :type :info
                                 :value (into [] result))]

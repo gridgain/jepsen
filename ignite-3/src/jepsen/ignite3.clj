@@ -14,13 +14,13 @@
 (defn db-dir
   "Creates path to the DB main directory, or its subpath (items in 'more')."
   [test & more]
-  (clojure.string/join "/" (concat [server-dir (str "ignite3-db-" (:version test))]
+  (clojure.string/join "/" (concat [server-dir (str (:flavour test) "-db-" (:version test))]
                                    more)))
 
 (defn cli-dir
   "Creates path to the CLI main directory, or its subpath (items in 'more')."
   [test & more]
-  (clojure.string/join "/" (concat [server-dir (str "ignite3-cli-" (:version test))]
+  (clojure.string/join "/" (concat [server-dir (str (:flavour test) "-cli-" (:version test))]
                                    more)))
 
 (defn list-nodes
