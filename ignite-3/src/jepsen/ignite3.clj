@@ -68,14 +68,14 @@
 
 (defn stop!
   "Shuts down server."
-  [node test]
+  [test node]
   (info node "Shutting down server node")
   (c/su
     (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))))
 
 (defn nuke!
   "Shuts down server and destroys all data."
-  [node test]
+  [test node]
   (c/su
     (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))
     (c/exec :rm :-rf server-dir)))
@@ -94,7 +94,7 @@
 
     (teardown! [_ test node]
       (info node "Teardown Apache Ignite" version)
-      (nuke! node test))
+      (nuke! test node))
 
     db/LogFiles
     (log-files [_ test node]
