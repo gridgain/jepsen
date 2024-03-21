@@ -22,7 +22,7 @@
    "restart"                (jepsen.nemesis/node-start-stopper
                               ignite-targeter
                               ign/stop!
-                              ign/start!)})
+                              ign/start-node!)})
 
 (def opt-spec
   "Command line options for tools.cli"

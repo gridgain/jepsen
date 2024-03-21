@@ -45,11 +45,16 @@
     (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
                      (db-dir test "etc" "ignite-config.conf"))))
 
+(defn start-node!
+  "Start a single Ignite node"
+  [test node]
+  (info node "Starting server node")
+  (c/cd (db-dir test) (c/exec "bin/ignite3db" "start")))
+
 (defn start!
   "Starts server for the given node."
   [test node]
-  (info node "Starting server node")
-  (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
+  (start-node! test node)
   (Thread/sleep 3000)
   (when (= 0 (.indexOf (:nodes test) node))
     (info node "Init cluster")
