@@ -66,12 +66,16 @@
                   (str "--meta-storage-node=" (node-name (:nodes test) node))))
     (Thread/sleep 3000)))
 
+(defn stop-raw!
+  [test node]
+  (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))
+
 (defn stop!
   "Shuts down server."
   [test node]
   (info node "Shutting down server node")
   (c/su
-    (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))))
+    (util/meh (stop-raw! test node))))
 
 (defn nuke!
   "Shuts down server and destroys all data."

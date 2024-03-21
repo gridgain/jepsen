@@ -21,7 +21,7 @@
   {"noop"                   jepsen.nemesis/noop
    "restart"                (jepsen.nemesis/node-start-stopper
                               ignite-targeter
-                              ign/stop!
+                              ign/stop-raw!
                               ign/start-node!)})
 
 (def opt-spec
