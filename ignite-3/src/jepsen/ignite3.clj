@@ -64,6 +64,7 @@
 (defn stop!
   "Shuts down server."
   [node test]
+  (info node "Shutting down server node")
   (c/su
     (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))))
 
