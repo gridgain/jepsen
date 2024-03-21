@@ -21,8 +21,14 @@
   {"noop"                   jepsen.nemesis/noop
    "restart"                (jepsen.nemesis/node-start-stopper
                               ignite-targeter
-                              ign/stop-raw!
-                              ign/start-node!)})
+                              (fn start
+                                [test node]
+                                (ign/stop-raw! test node)
+                                [:paused node])
+                              (fn stop
+                                [test node]
+                                (ign/start-node! test node)
+                                [:resumed node]))})
 
 (def opt-spec
   "Command line options for tools.cli"
