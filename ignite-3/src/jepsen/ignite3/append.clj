@@ -19,8 +19,6 @@
 
 (def table-name "APPEND")
 
-(def max-attempts 20)
-
 (defn sql-create-zone
   "Create replication zone with a given amount of table replicas"
   [replicas]
