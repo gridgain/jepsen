@@ -112,9 +112,9 @@
   (->> generator
        (gen/stagger 1/10)
        (gen/nemesis
-         (cycle [(gen/sleep 5)
+         (cycle [(gen/sleep 30)
                  {:type :info, :f :start}
-                 (gen/sleep 1)
+                 (gen/sleep 30)
                  {:type :info, :f :stop}]))
        (gen/time-limit time-limit)))
 
