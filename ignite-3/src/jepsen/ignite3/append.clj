@@ -10,9 +10,10 @@
                     [ignite3 :as ignite3]
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
-  (:import (org.apache.ignite Ignite)
-           (org.apache.ignite.client IgniteClient RetryLimitPolicy)
-           (org.apache.ignite.table.mapper Mapper)))
+  (:import (org.apache.ignite               Ignite)
+           (org.apache.ignite.client        IgniteClient RetryLimitPolicy)
+           (org.apache.ignite.sql           Statement)
+           (org.apache.ignite.table.mapper  Mapper)))
 
 ; ---------- Common definitions ----------
 
@@ -39,7 +40,10 @@
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
   ([sql query params] (run-sql sql nil query params))
   ([sql txn query params]
-    (log/info query params)
+    (let [printable-query (if (instance? Statement query)
+                              (.query query)
+                              query)]
+      (log/info printable-query params))
     (.execute sql txn query (object-array params))))
 
 (defn as-int-list [s]
