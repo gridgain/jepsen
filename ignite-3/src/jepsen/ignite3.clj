@@ -68,14 +68,14 @@
 
 (defn stop-raw!
   [test node]
-  (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))
+  (c/su
+    (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner")))
 
 (defn stop!
   "Shuts down server."
   [test node]
   (info node "Shutting down server node")
-  (c/su
-    (util/meh (stop-raw! test node))))
+  (util/meh (stop-raw! test node)))
 
 (defn nuke!
   "Shuts down server and destroys all data."
