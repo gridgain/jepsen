@@ -20,7 +20,13 @@
 
 (def max-attempts 20)
 
-(def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
+(defn sql-create-zone
+  "Create replication zone with a given amount of table replicas"
+  [replicas]
+  (str "create zone if not exists \"" table-name "_zone\" with replicas=" replicas))
+
+(def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
+                     " with PRIMARY_ZONE='" table-name "_zone'"))
 
 (def sql-select-all (str "select * from " table-name))
 
@@ -129,8 +135,11 @@
       (assoc this :ignite ignite)))
   ;
   (setup! [this test]
-    (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
-                rs (run-sql (.sql ignite) create-stmt [])]
+    (with-open [create-zone-stmt    (.createStatement (.sql ignite)
+                                                      (sql-create-zone (count (:nodes test))))
+                zone-rs             (run-sql (.sql ignite) create-zone-stmt [])
+                create-table-stmt   (.createStatement (.sql ignite) sql-create)
+                table-rs            (run-sql (.sql ignite) create-table-stmt [])]
       (log/info "Table" table-name "created")))
   ;
   (invoke! [this test op]
