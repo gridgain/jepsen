@@ -15,7 +15,7 @@
    "register"   register/register-test})
 
 (defn ignite-targeter [test nodes]
-  (first nodes))
+  (rand-nth nodes))
 
 (def nemesis-types
   {"noop"                   jepsen.nemesis/noop
