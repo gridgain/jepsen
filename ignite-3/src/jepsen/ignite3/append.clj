@@ -31,10 +31,10 @@
 
 (defn run-sql
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
-  ([session query params] (run-sql session nil query params))
-  ([session txn query params]
+  ([sql query params] (run-sql sql nil query params))
+  ([sql txn query params]
     (log/info query params)
-    (.execute session txn query (object-array params))))
+    (.execute sql txn query (object-array params))))
 
 (defn as-int-list [s]
   "Convert a string representation of integers into an actual list of integers.
@@ -57,22 +57,20 @@
   Accessor
   ;
   (read! [this ignite txn [opcode k v]]
-    (let [r (with-open [session   (.createSession (.sql ignite))
-                        rs        (run-sql session txn sql-select [k])]
+    (let [r (with-open [rs (run-sql (.sql ignite) txn sql-select [k])]
               (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
                 (as-int-list s)))]
       [:r k r]))
   ;
   (append! [this ignite txn [opcode k v]]
-    (with-open [session   (.createSession (.sql ignite))
-                read-rs   (run-sql session txn sql-select [k])]
+    (with-open [read-rs (run-sql (.sql ignite) txn sql-select [k])]
       (if (.hasNext read-rs)
         ; update existing list
         (let [old-list    (.stringValue (.next read-rs) 1)
               new-list    (str old-list "," v)]
-          (with-open [write-rs (run-sql session txn sql-update [new-list k])]))
+          (with-open [write-rs (run-sql (.sql ignite) txn sql-update [new-list k])]))
         ; create a new list
-        (with-open [write-rs (run-sql session txn sql-insert [k (str v)])]))
+        (with-open [write-rs (run-sql (.sql ignite) txn sql-insert [k (str v)])]))
       [opcode k v])))
 
 ; ---------- KV Access ----------
@@ -114,8 +112,7 @@
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
-  (with-open [session (.createSession (.sql ignite))
-              rs (run-sql session sql-select-all [])]
+  (with-open [rs (run-sql (.sql ignite) sql-select-all [])]
     (log/info "Table content")
     (while (.hasNext rs)
       (let [row (.next rs)]
@@ -133,8 +130,7 @@
   ;
   (setup! [this test]
     (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
-                session (.createSession (.sql ignite))
-                rs (run-sql session create-stmt [])]
+                rs (run-sql (.sql ignite) create-stmt [])]
       (log/info "Table" table-name "created")))
   ;
   (invoke! [this test op]
