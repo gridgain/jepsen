@@ -11,7 +11,9 @@
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite               Ignite)
-           (org.apache.ignite.client        IgniteClient RetryLimitPolicy)
+           (org.apache.ignite.client        IgniteClient
+                                            IgniteClientConnectionException
+                                            RetryLimitPolicy)
            (org.apache.ignite.sql           Statement)
            (org.apache.ignite.table.mapper  Mapper)))
 
@@ -126,40 +128,49 @@
       (let [row (.next rs)]
         (log/info (.intValue row 0) ":" (.stringValue row 1))))))
 
-(defrecord Client [^Ignite ignite acc]
+(defrecord Client [^Ignite ignite acc connected]
   client/Client
 
   (open! [this test node]
-    (let [ignite (-> (IgniteClient/builder)
-                     (.addresses (into-array [(str node ":10800")]))
-                     (.retryPolicy (RetryLimitPolicy.))
-                     (.build))]
-      (assoc this :ignite ignite)))
+    (try
+      (let [ignite (-> (IgniteClient/builder)
+                       (.addresses (into-array [(str node ":10800")]))
+                       (.retryPolicy (RetryLimitPolicy.))
+                       (.build))]
+        (assoc this :ignite ignite, :connected true))
+      (catch IgniteClientConnectionException _
+        (assoc this :connected false))))
 
   (close! [this test]
-    (.close ignite))
+    (when connected
+      (.close ignite)))
 
   (setup! [this test]
-    (with-open [create-zone-stmt    (.createStatement (.sql ignite)
-                                                      (sql-create-zone (count (:nodes test))))
-                zone-rs             (run-sql (.sql ignite) create-zone-stmt [])
-                create-table-stmt   (.createStatement (.sql ignite) sql-create)
-                table-rs            (run-sql (.sql ignite) create-table-stmt [])]
-      (log/info "Table" table-name "created")))
+    (when connected
+      (with-open [create-zone-stmt    (.createStatement (.sql ignite)
+                                                        (sql-create-zone (count (:nodes test))))
+                  zone-rs             (run-sql (.sql ignite) create-zone-stmt [])
+                  create-table-stmt   (.createStatement (.sql ignite) sql-create)
+                  table-rs            (run-sql (.sql ignite) create-table-stmt [])]
+        (log/info "Table" table-name "created"))))
 
-  (teardown! [this test] (print-table-content ignite))
+  (teardown! [this test]
+    (when connected
+      (print-table-content ignite)))
 
   (invoke! [this test op]
-    (let [ops   (:value op)
-          result (invoke-ops ignite acc ops)
-          overall-result (assoc op
-                                :type :info
-                                :value (into [] result))]
-      overall-result)))
+    (if connected
+      (let [ops   (:value op)
+            result (invoke-ops ignite acc ops)
+            overall-result (assoc op
+                                  :type :info
+                                  :value (into [] result))]
+        overall-result)
+      (assoc op :type :fail :error ::not-connected))))
 
 (comment "for repl"
 
-(def c (client/open! (Client. nil (KeyValueAccessor.)) {} "127.0.0.1"))
+(def c (client/open! (Client. nil (KeyValueAccessor.) false) {} "127.0.0.1"))
 (client/setup! c {})
 
 (client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil] [:r 6 nil]]})
@@ -185,7 +196,7 @@
     (merge
       (let [test-ops {:consistency-models [:strict-serializable]}]
         {:name      "append-test"
-         :client    (Client. nil (get accessors (:accessor opts)))
+         :client    (Client. nil (get accessors (:accessor opts)) false)
          :checker   (app/checker test-ops)
          :generator (ignite3/wrap-generator (app/gen test-ops) (:time-limit opts))})
       opts)))
