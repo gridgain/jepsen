@@ -128,14 +128,17 @@
 
 (defrecord Client [^Ignite ignite acc]
   client/Client
-  ;
+
   (open! [this test node]
     (let [ignite (-> (IgniteClient/builder)
                      (.addresses (into-array [(str node ":10800")]))
                      (.retryPolicy (RetryLimitPolicy.))
                      (.build))]
       (assoc this :ignite ignite)))
-  ;
+
+  (close! [this test]
+    (.close ignite))
+
   (setup! [this test]
     (with-open [create-zone-stmt    (.createStatement (.sql ignite)
                                                       (sql-create-zone (count (:nodes test))))
@@ -143,19 +146,16 @@
                 create-table-stmt   (.createStatement (.sql ignite) sql-create)
                 table-rs            (run-sql (.sql ignite) create-table-stmt [])]
       (log/info "Table" table-name "created")))
-  ;
+
+  (teardown! [this test] (print-table-content ignite))
+
   (invoke! [this test op]
     (let [ops   (:value op)
           result (invoke-ops ignite acc ops)
           overall-result (assoc op
                                 :type :info
                                 :value (into [] result))]
-      overall-result))
-  ;
-  (teardown! [this test] (print-table-content ignite))
-  ;
-  (close! [this test]
-    (.close ignite)))
+      overall-result)))
 
 (comment "for repl"
 
