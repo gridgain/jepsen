@@ -118,7 +118,7 @@
                         :append  (append! acc ignite txn %))
                      (:value op))]
     (.commit txn)
-    result))
+    (assoc op :type :info :value (into [] result))))
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
@@ -160,11 +160,7 @@
 
   (invoke! [this test op]
     (if connected
-      (let [result (invoke-ops ignite acc op)
-            overall-result (assoc op
-                                  :type :info
-                                  :value (into [] result))]
-        overall-result)
+      (invoke-ops ignite acc op)
       (assoc op :type :fail :error ::not-connected))))
 
 (comment "for repl"
