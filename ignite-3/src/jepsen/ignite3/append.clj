@@ -110,13 +110,13 @@
 
 ; ---------- General scenario ----------
 
-(defn invoke-ops [^Ignite ignite acc ops]
+(defn invoke-ops [^Ignite ignite acc op]
   "Perform operations in a transaction."
   (let [txn (.begin (.transactions ignite))
         result (mapv #(case (first %)
                         :r       (read! acc ignite txn %)
                         :append  (append! acc ignite txn %))
-                     ops)]
+                     (:value op))]
     (.commit txn)
     result))
 
@@ -160,8 +160,7 @@
 
   (invoke! [this test op]
     (if connected
-      (let [ops   (:value op)
-            result (invoke-ops ignite acc ops)
+      (let [result (invoke-ops ignite acc op)
             overall-result (assoc op
                                   :type :info
                                   :value (into [] result))]
