@@ -11,9 +11,7 @@
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
   (:import (org.apache.ignite               Ignite)
-           (org.apache.ignite.client        IgniteClient
-                                            IgniteClientConnectionException
-                                            RetryLimitPolicy)
+           (org.apache.ignite.client        IgniteClient RetryLimitPolicy)
            (org.apache.ignite.sql           Statement)
            (org.apache.ignite.table.mapper  Mapper)))
 
@@ -112,17 +110,13 @@
 
 (defn invoke-ops [^Ignite ignite acc ops]
   "Perform operations in a transaction."
-  (try
-    (let [txn (.begin (.transactions ignite))
-          result (mapv #(case (first %)
-                          :r       (read! acc ignite txn %)
-                          :append  (append! acc ignite txn %))
-                       ops)]
-      (.commit txn)
-      result)
-    (catch IgniteClientConnectionException _
-      (mapv #(assoc % :type :fail, :error :no-connection)
-            ops))))
+  (let [txn (.begin (.transactions ignite))
+        result (mapv #(case (first %)
+                        :r       (read! acc ignite txn %)
+                        :append  (append! acc ignite txn %))
+                     ops)]
+    (.commit txn)
+    result))
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
