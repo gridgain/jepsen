@@ -112,13 +112,16 @@
 
 (defn invoke-ops [^Ignite ignite acc op]
   "Perform operations in a transaction."
-  (let [txn (.begin (.transactions ignite))
-        result (mapv #(case (first %)
-                        :r       (read! acc ignite txn %)
-                        :append  (append! acc ignite txn %))
-                     (:value op))]
-    (.commit txn)
-    (assoc op :type :info :value (into [] result))))
+  (try
+    (let [txn (.begin (.transactions ignite))
+          result (mapv #(case (first %)
+                          :r       (read! acc ignite txn %)
+                          :append  (append! acc ignite txn %))
+                       (:value op))]
+      (.commit txn)
+      (assoc op :type :info :value (into [] result)))
+    (catch IgniteClientConnectionException _
+      (assoc op :type :fail :error ::not-connected))))
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
