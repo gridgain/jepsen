@@ -111,6 +111,18 @@
 
 ; ---------- General scenario ----------
 
+(defn extract-reason [exc]
+  "Convert an exception into a known reason, or return nil."
+  (let [msg (.getMessage exc)]
+    (cond
+        (.contains msg "Failed to acquire a lock") ::deadlock-prevention
+        (or (.contains msg "Failed to process replica request")
+            (.contains msg "Node left the cluster")
+            (.contains msg "The primary replica has changed")
+            (.contains msg "Unable to request next batch")
+            (.contains msg "Unable to send fragment")) ::not-connected
+        :else nil)))
+
 (defn fail [op error]
   "Mark operation op as failed with a given error."
   (assoc op :type :fail :error error))
@@ -126,18 +138,9 @@
       (.commit txn)
       (assoc op :type :info :value (into [] result)))
     (catch SqlException e
-      (cond
-        (.contains (.getMessage e) "Failed to acquire a lock") (fail op ::deadlock-prevention)
-        (or (.contains (.getMessage e) "Failed to process replica request")
-            (.contains (.getMessage e) "Node left the cluster")
-            (.contains (.getMessage e) "The primary replica has changed")
-            (.contains (.getMessage e) "Unable to request next batch")
-            (.contains (.getMessage e) "Unable to send fragment")) (fail op ::not-connected)
-        :else (throw e)))
+      (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
     (catch TransactionException e
-      (cond
-      (.contains (.getMessage e) "Failed to acquire a lock") (fail op ::deadlock-prevention)
-      :else (throw e)))
+      (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
     (catch IgniteClientConnectionException _
       (fail op ::not-connected))))
 
