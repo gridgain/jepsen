@@ -68,8 +68,7 @@
 
 (defn stop-raw!
   [test node]
-  (c/su
-    (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner")))
+  (c/cd (db-dir test) (c/exec "bin/ignite3db" "stop")))
 
 (defn stop!
   "Shuts down server."
