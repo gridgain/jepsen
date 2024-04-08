@@ -39,13 +39,13 @@
 
 (defn run-sql
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
-  ([sql query params] (run-sql sql nil query params))
-  ([sql txn query params]
+  ([ignite query params] (run-sql ignite nil query params))
+  ([ignite txn query params]
     (let [printable-query (if (instance? Statement query)
                               (.query query)
                               query)]
       (log/info printable-query params))
-    (.execute sql txn query (object-array params))))
+    (.execute (.sql ignite) txn query (object-array params))))
 
 (defn as-int-list [s]
   "Convert a string representation of integers into an actual list of integers.
@@ -68,20 +68,20 @@
   Accessor
 
   (read! [this ignite txn [opcode k v]]
-    (let [r (with-open [rs (run-sql (.sql ignite) txn sql-select [k])]
+    (let [r (with-open [rs (run-sql ignite txn sql-select [k])]
               (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
                 (as-int-list s)))]
       [:r k r]))
 
   (append! [this ignite txn [opcode k v]]
-    (with-open [read-rs (run-sql (.sql ignite) txn sql-select [k])]
+    (with-open [read-rs (run-sql ignite txn sql-select [k])]
       (if (.hasNext read-rs)
         ; update existing list
         (let [old-list    (.stringValue (.next read-rs) 1)
               new-list    (str old-list "," v)]
-          (with-open [write-rs (run-sql (.sql ignite) txn sql-update [new-list k])]))
+          (with-open [write-rs (run-sql ignite txn sql-update [new-list k])]))
         ; create a new list
-        (with-open [write-rs (run-sql (.sql ignite) txn sql-insert [k (str v)])]))
+        (with-open [write-rs (run-sql ignite txn sql-insert [k (str v)])]))
       [opcode k v])))
 
 ; ---------- KV Access ----------
@@ -147,7 +147,7 @@
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
   (try
-    (with-open [rs (run-sql (.sql ignite) sql-select-all [])]
+    (with-open [rs (run-sql ignite sql-select-all [])]
       (log/info "Table content")
       (while (.hasNext rs)
         (let [row (.next rs)]
@@ -176,9 +176,9 @@
     (when connected
       (with-open [create-zone-stmt    (.createStatement (.sql ignite)
                                                         (sql-create-zone (count (:nodes test))))
-                  zone-rs             (run-sql (.sql ignite) create-zone-stmt [])
+                  zone-rs             (run-sql ignite create-zone-stmt [])
                   create-table-stmt   (.createStatement (.sql ignite) sql-create)
-                  table-rs            (run-sql (.sql ignite) create-table-stmt [])]
+                  table-rs            (run-sql ignite create-table-stmt [])]
         (log/info "Table" table-name "created"))))
 
   (teardown! [this test]
