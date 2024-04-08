@@ -14,7 +14,7 @@
            (org.apache.ignite.client        IgniteClient
                                             IgniteClientConnectionException
                                             RetryLimitPolicy)
-           (org.apache.ignite.sql           Statement)
+           (org.apache.ignite.sql           Statement SqlException)
            (org.apache.ignite.table.mapper  Mapper)))
 
 ; ---------- Common definitions ----------
@@ -120,6 +120,10 @@
                        (:value op))]
       (.commit txn)
       (assoc op :type :info :value (into [] result)))
+    (catch SqlException e
+      (if (.contains (.getMessage e) "Failed to acquire a lock")
+        (assoc op :type :fail :error ::deadlock-prevention)
+        (throw e)))
     (catch IgniteClientConnectionException _
       (assoc op :type :fail :error ::not-connected))))
 
