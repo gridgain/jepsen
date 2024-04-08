@@ -15,7 +15,8 @@
                                             IgniteClientConnectionException
                                             RetryLimitPolicy)
            (org.apache.ignite.sql           Statement SqlException)
-           (org.apache.ignite.table.mapper  Mapper)))
+           (org.apache.ignite.table.mapper  Mapper)
+           (org.apache.ignite.tx            TransactionException)))
 
 ; ---------- Common definitions ----------
 
@@ -133,6 +134,10 @@
             (.contains (.getMessage e) "Unable to request next batch")
             (.contains (.getMessage e) "Unable to send fragment")) (fail op ::not-connected)
         :else (throw e)))
+    (catch TransactionException e
+      (cond
+      (.contains (.getMessage e) "Failed to acquire a lock") (fail op ::deadlock-prevention)
+      :else (throw e)))
     (catch IgniteClientConnectionException _
       (fail op ::not-connected))))
 
