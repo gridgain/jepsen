@@ -110,6 +110,10 @@
 
 ; ---------- General scenario ----------
 
+(defn fail [op error]
+  "Mark operation op as failed with a given error."
+  (assoc op :type :fail :error error))
+
 (defn invoke-ops [^Ignite ignite acc op]
   "Perform operations in a transaction."
   (try
@@ -122,10 +126,10 @@
       (assoc op :type :info :value (into [] result)))
     (catch SqlException e
       (if (.contains (.getMessage e) "Failed to acquire a lock")
-        (assoc op :type :fail :error ::deadlock-prevention)
+        (fail op ::deadlock-prevention)
         (throw e)))
     (catch IgniteClientConnectionException _
-      (assoc op :type :fail :error ::not-connected))))
+      (fail op ::not-connected))))
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
@@ -168,7 +172,7 @@
   (invoke! [this test op]
     (if connected
       (invoke-ops ignite acc op)
-      (assoc op :type :fail :error ::not-connected))))
+      (fail op ::not-connected))))
 
 (comment "for repl"
 
