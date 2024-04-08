@@ -127,9 +127,11 @@
     (catch SqlException e
       (cond
         (.contains (.getMessage e) "Failed to acquire a lock") (fail op ::deadlock-prevention)
-        (.contains (.getMessage e) "Failed to process replica request") (fail op ::not-connected)
-        (.contains (.getMessage e) "Unable to request next batch") (fail op ::not-connected)
-        (.contains (.getMessage e) "Unable to send fragment") (fail op ::not-connected)
+        (or (.contains (.getMessage e) "Failed to process replica request")
+            (.contains (.getMessage e) "Node left the cluster")
+            (.contains (.getMessage e) "The primary replica has changed")
+            (.contains (.getMessage e) "Unable to request next batch")
+            (.contains (.getMessage e) "Unable to send fragment")) (fail op ::not-connected)
         :else (throw e)))
     (catch IgniteClientConnectionException _
       (fail op ::not-connected))))
