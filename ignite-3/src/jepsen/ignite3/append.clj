@@ -125,9 +125,12 @@
       (.commit txn)
       (assoc op :type :info :value (into [] result)))
     (catch SqlException e
-      (if (.contains (.getMessage e) "Failed to acquire a lock")
-        (fail op ::deadlock-prevention)
-        (throw e)))
+      (cond
+        (.contains (.getMessage e) "Failed to acquire a lock") (fail op ::deadlock-prevention)
+        (.contains (.getMessage e) "Failed to process replica request") (fail op ::not-connected)
+        (.contains (.getMessage e) "Unable to request next batch") (fail op ::not-connected)
+        (.contains (.getMessage e) "Unable to send fragment") (fail op ::not-connected)
+        :else (throw e)))
     (catch IgniteClientConnectionException _
       (fail op ::not-connected))))
 
