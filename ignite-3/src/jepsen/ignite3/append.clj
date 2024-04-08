@@ -138,11 +138,14 @@
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
-  (with-open [rs (run-sql (.sql ignite) sql-select-all [])]
-    (log/info "Table content")
-    (while (.hasNext rs)
-      (let [row (.next rs)]
-        (log/info (.intValue row 0) ":" (.stringValue row 1))))))
+  (try
+    (with-open [rs (run-sql (.sql ignite) sql-select-all [])]
+      (log/info "Table content")
+      (while (.hasNext rs)
+        (let [row (.next rs)]
+          (log/info (.intValue row 0) ":" (.stringValue row 1)))))
+    (catch Exception e
+      (log/warn "Failed to get table content:" (.getMessage e)))))
 
 (defrecord Client [^Ignite ignite acc connected]
   client/Client
