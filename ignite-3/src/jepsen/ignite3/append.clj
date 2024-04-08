@@ -66,13 +66,13 @@
 
 (deftype SqlAccessor []
   Accessor
-  ;
+
   (read! [this ignite txn [opcode k v]]
     (let [r (with-open [rs (run-sql (.sql ignite) txn sql-select [k])]
               (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
                 (as-int-list s)))]
       [:r k r]))
-  ;
+
   (append! [this ignite txn [opcode k v]]
     (with-open [read-rs (run-sql (.sql ignite) txn sql-select [k])]
       (if (.hasNext read-rs)
@@ -94,12 +94,12 @@
 
 (deftype KeyValueAccessor []
   Accessor
-  ;
+
   (read! [this ignite txn [opcode k v]]
     (let [view      (kv-view ignite)
           value     (as-int-list (.get view txn (int k)))]
       [:r k value]))
-  ;
+
   (append! [this ignite txn [opcode k v]]
     (let [view      (kv-view ignite)
           old-value (.get view txn (int k))
