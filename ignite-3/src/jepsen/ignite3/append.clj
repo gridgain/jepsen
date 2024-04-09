@@ -131,6 +131,7 @@
 (defn invoke-ops [^Ignite ignite acc op]
   "Perform operations in a transaction."
   (try
+    ; (log/info "Ignite:" (.toString ignite))
     (let [txn (.begin (.transactions ignite))
           result (mapv #(case (first %)
                           :r       (read! acc ignite txn %)
