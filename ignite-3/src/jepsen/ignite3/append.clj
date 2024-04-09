@@ -115,13 +115,13 @@
   "Convert an exception into a known reason, or return nil."
   (let [msg (.getMessage exc)]
     (cond
-        (.contains msg "Failed to acquire a lock") ::deadlock-prevention
-        (.contains msg "Handshake timeout") ::handshake-timeout
-        (or (.contains msg "Failed to process replica request")
-            (.contains msg "Node left the cluster")
-            (.contains msg "The primary replica has changed")
-            (.contains msg "Unable to request next batch")
-            (.contains msg "Unable to send fragment")) ::not-connected
+        (.contains msg "Failed to acquire a lock")          ::deadlock-prevention
+        (.contains msg "Handshake timeout")                 ::handshake-timeout
+        (.contains msg "Node left the cluster")             ::node-left
+        (.contains msg "The primary replica has changed")   ::primary-replica-changed
+        (.contains msg "Failed to process replica request") ::failed-replica-request
+        (.contains msg "Unable to request next batch")      ::unable-request-batch
+        (.contains msg "Unable to send fragment")           ::unable-send-fragment
         :else nil)))
 
 (defn fail [op error]
