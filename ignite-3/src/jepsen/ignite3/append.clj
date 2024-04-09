@@ -116,6 +116,7 @@
   (let [msg (.getMessage exc)]
     (cond
         (.contains msg "Failed to acquire a lock") ::deadlock-prevention
+        (.contains msg "Handshake timeout") ::handshake-timeout
         (or (.contains msg "Failed to process replica request")
             (.contains msg "Node left the cluster")
             (.contains msg "The primary replica has changed")
