@@ -157,44 +157,44 @@
     (catch Exception e
       (log/warn "Failed to get table content:" (.getMessage e)))))
 
-(defrecord Client [^Ignite ignite acc connected]
+(defrecord Client [ignite-builder acc]
   client/Client
 
   (open! [this test node]
-    (try
-      (let [ignite (-> (IgniteClient/builder)
-                       (.addresses (into-array [(str node ":10800")]))
-                       (.retryPolicy (RetryLimitPolicy.))
-                       (.build))]
-        (assoc this :ignite ignite, :connected true))
-      (catch IgniteClientConnectionException _
-        (assoc this :connected false))))
+    (let [builder (-> (IgniteClient/builder)
+                      (.addresses (into-array [(str node ":10800")]))
+                      (.retryPolicy (RetryLimitPolicy.)))]
+        (assoc this :ignite-builder builder)))
 
-  (close! [this test]
-    (when connected
-      (.close ignite)))
+  (close! [this test])
 
   (setup! [this test]
-    (when connected
-      (with-open [create-zone-stmt    (.createStatement (.sql ignite)
+    (try
+      (with-open [ignite              (.build ignite-builder)
+                  create-zone-stmt    (.createStatement (.sql ignite)
                                                         (sql-create-zone (count (:nodes test))))
                   zone-rs             (run-sql ignite create-zone-stmt [])
                   create-table-stmt   (.createStatement (.sql ignite) sql-create)
                   table-rs            (run-sql ignite create-table-stmt [])]
-        (log/info "Table" table-name "created"))))
+        (log/info "Table" table-name "created"))
+      (catch IgniteClientConnectionException _)))
 
   (teardown! [this test]
-    (when connected
-      (print-table-content ignite)))
+    (try
+      (with-open [ignite (.build ignite-builder)]
+        (print-table-content ignite))
+      (catch IgniteClientConnectionException _)))
 
   (invoke! [this test op]
-    (if connected
-      (invoke-ops ignite acc op)
-      (fail op ::not-connected))))
+    (try
+      (with-open [ignite (.build ignite-builder)]
+        (invoke-ops ignite acc op))
+      (catch IgniteClientConnectionException _
+        (fail op ::not-connected)))))
 
 (comment "for repl"
 
-(def c (client/open! (Client. nil (KeyValueAccessor.) false) {} "127.0.0.1"))
+(def c (client/open! (Client. nil (KeyValueAccessor.)) {} "127.0.0.1"))
 (client/setup! c {})
 
 (client/invoke! c {} {:type :invoke, :process 0, :f :txn, :value [[:r 5 nil] [:r 6 nil]]})
@@ -220,7 +220,7 @@
     (merge
       (let [test-ops {:consistency-models [:strict-serializable]}]
         {:name      "append-test"
-         :client    (Client. nil (get accessors (:accessor opts)) false)
+         :client    (Client. nil (get accessors (:accessor opts)))
          :checker   (app/checker test-ops)
          :generator (ignite3/wrap-generator (app/gen test-ops) (:time-limit opts))})
       opts)))
