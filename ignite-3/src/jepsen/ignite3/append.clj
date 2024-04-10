@@ -120,6 +120,7 @@
         (.contains msg "Node left the cluster")             ::node-left
         (.contains msg "The primary replica has changed")   ::primary-replica-changed
         (.contains msg "Failed to process replica request") ::failed-replica-request
+        (.contains msg "Replication is timed out")          ::replication-timeout
         (.contains msg "Unable to request next batch")      ::unable-request-batch
         (.contains msg "Unable to send fragment")           ::unable-send-fragment
         :else nil)))
