@@ -23,7 +23,7 @@
                               ignite-targeter
                               (fn start
                                 [test node]
-                                (ign/stop-raw! test node)
+                                (ign/stop-node! test node)
                                 [:paused node])
                               (fn stop
                                 [test node]
