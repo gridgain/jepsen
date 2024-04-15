@@ -25,7 +25,7 @@
 (defn sql-create-zone
   "Create replication zone with a given amount of table replicas"
   [replicas]
-  (str "create zone if not exists \"" table-name "_zone\" with replicas=" replicas))
+  (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas))
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
                      " with PRIMARY_ZONE='" table-name "_zone'"))
