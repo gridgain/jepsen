@@ -5,6 +5,7 @@
             [clojure.tools.logging      :refer :all]
             [jepsen.cli                 :as jc]
             [jepsen.core                :as jepsen]
+            [jepsen.ignite3             :as ign]
             [jepsen.ignite3.append      :as append]
             [jepsen.ignite3.register    :as register]))
 
@@ -13,8 +14,21 @@
   {"append"     append/append-test
    "register"   register/register-test})
 
+(defn ignite-targeter [test nodes]
+  (rand-nth nodes))
+
 (def nemesis-types
-  {"noop"                   jepsen.nemesis/noop})
+  {"noop"                   jepsen.nemesis/noop
+   "restart"                (jepsen.nemesis/node-start-stopper
+                              ignite-targeter
+                              (fn start
+                                [test node]
+                                (ign/stop-node! test node)
+                                [:paused node])
+                              (fn stop
+                                [test node]
+                                (ign/start-node! test node)
+                                [:resumed node]))})
 
 (def opt-spec
   "Command line options for tools.cli"

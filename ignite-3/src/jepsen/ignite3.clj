@@ -45,11 +45,16 @@
     (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
                      (db-dir test "etc" "ignite-config.conf"))))
 
+(defn start-node!
+  "Start a single Ignite node"
+  [test node]
+  (info node "Starting server node")
+  (c/cd (db-dir test) (c/exec "bin/ignite3db" "start")))
+
 (defn start!
   "Starts server for the given node."
   [test node]
-  (info node "Starting server node")
-  (c/cd (db-dir test) (c/exec "bin/ignite3db" "start"))
+  (start-node! test node)
   (Thread/sleep 3000)
   (when (= 0 (.indexOf (:nodes test) node))
     (info node "Init cluster")
@@ -61,15 +66,19 @@
                   (str "--meta-storage-node=" (node-name (:nodes test) node))))
     (Thread/sleep 3000)))
 
+(defn stop-node!
+  [test node]
+  (c/cd (db-dir test) (c/exec "bin/ignite3db" "stop")))
+
 (defn stop!
   "Shuts down server."
-  [node test]
-  (c/su
-    (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))))
+  [test node]
+  (info node "Shutting down server node")
+  (util/meh (stop-node! test node)))
 
 (defn nuke!
   "Shuts down server and destroys all data."
-  [node test]
+  [test node]
   (c/su
     (util/meh (c/exec :pkill :-9 :-f "org.apache.ignite.internal.app.IgniteRunner"))
     (c/exec :rm :-rf server-dir)))
@@ -88,11 +97,11 @@
 
     (teardown! [_ test node]
       (info node "Teardown Apache Ignite" version)
-      (nuke! node test))
+      (nuke! test node))
 
     db/LogFiles
     (log-files [_ test node]
-      (let [files (c/exec :find (db-dir test "log") :-type "f" :-name "ignite3*.log")]
+      (let [files (c/exec :find (db-dir test "log") :-type "f" :-name "ignite3*")]
         (info node files)
         (into [] (.split files "\n"))))))
 
@@ -102,9 +111,9 @@
   (->> generator
        (gen/stagger 1/10)
        (gen/nemesis
-         (cycle [(gen/sleep 5)
+         (cycle [(gen/sleep 30)
                  {:type :info, :f :start}
-                 (gen/sleep 1)
+                 (gen/sleep 30)
                  {:type :info, :f :stop}]))
        (gen/time-limit time-limit)))
 

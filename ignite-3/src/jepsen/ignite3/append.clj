@@ -10,17 +10,25 @@
                     [ignite3 :as ignite3]
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
-  (:import (org.apache.ignite Ignite)
-           (org.apache.ignite.client IgniteClient RetryLimitPolicy)
-           (org.apache.ignite.table.mapper Mapper)))
+  (:import (org.apache.ignite               Ignite)
+           (org.apache.ignite.client        IgniteClient
+                                            IgniteClientConnectionException
+                                            RetryLimitPolicy)
+           (org.apache.ignite.sql           Statement SqlException)
+           (org.apache.ignite.table.mapper  Mapper)
+           (org.apache.ignite.tx            TransactionException)))
 
 ; ---------- Common definitions ----------
 
 (def table-name "APPEND")
 
-(def max-attempts 20)
+(defn sql-create-zone
+  "Create replication zone with a given amount of table replicas"
+  [replicas]
+  (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas))
 
-(def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"))
+(def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
+                     " with PRIMARY_ZONE='" table-name "_zone'"))
 
 (def sql-select-all (str "select * from " table-name))
 
@@ -31,10 +39,13 @@
 
 (defn run-sql
   "Run a SQL query. Return ResultSet instance that should be closed afterwards."
-  ([sql query params] (run-sql sql nil query params))
-  ([sql txn query params]
-    (log/info query params)
-    (.execute sql txn query (object-array params))))
+  ([ignite query params] (run-sql ignite nil query params))
+  ([ignite txn query params]
+    (let [printable-query (if (instance? Statement query)
+                              (.query query)
+                              query)]
+      (log/info printable-query params))
+    (.execute (.sql ignite) txn query (object-array params))))
 
 (defn as-int-list [s]
   "Convert a string representation of integers into an actual list of integers.
@@ -55,22 +66,22 @@
 
 (deftype SqlAccessor []
   Accessor
-  ;
+
   (read! [this ignite txn [opcode k v]]
-    (let [r (with-open [rs (run-sql (.sql ignite) txn sql-select [k])]
+    (let [r (with-open [rs (run-sql ignite txn sql-select [k])]
               (let [s (if (.hasNext rs) (.stringValue (.next rs) 1) "")]
                 (as-int-list s)))]
       [:r k r]))
-  ;
+
   (append! [this ignite txn [opcode k v]]
-    (with-open [read-rs (run-sql (.sql ignite) txn sql-select [k])]
+    (with-open [read-rs (run-sql ignite txn sql-select [k])]
       (if (.hasNext read-rs)
         ; update existing list
         (let [old-list    (.stringValue (.next read-rs) 1)
               new-list    (str old-list "," v)]
-          (with-open [write-rs (run-sql (.sql ignite) txn sql-update [new-list k])]))
+          (with-open [write-rs (run-sql ignite txn sql-update [new-list k])]))
         ; create a new list
-        (with-open [write-rs (run-sql (.sql ignite) txn sql-insert [k (str v)])]))
+        (with-open [write-rs (run-sql ignite txn sql-insert [k (str v)])]))
       [opcode k v])))
 
 ; ---------- KV Access ----------
@@ -83,12 +94,12 @@
 
 (deftype KeyValueAccessor []
   Accessor
-  ;
+
   (read! [this ignite txn [opcode k v]]
     (let [view      (kv-view ignite)
           value     (as-int-list (.get view txn (int k)))]
       [:r k value]))
-  ;
+
   (append! [this ignite txn [opcode k v]]
     (let [view      (kv-view ignite)
           old-value (.get view txn (int k))
@@ -100,51 +111,87 @@
 
 ; ---------- General scenario ----------
 
-(defn invoke-ops [^Ignite ignite acc ops]
+(defn extract-reason [exc]
+  "Convert an exception into a known reason, or return nil."
+  (let [msg (.getMessage exc)]
+    (cond
+        (.contains msg "Failed to acquire a lock")          ::deadlock-prevention
+        (.contains msg "Handshake timeout")                 ::handshake-timeout
+        (.contains msg "Node left the cluster")             ::node-left
+        (.contains msg "The primary replica has changed")   ::primary-replica-changed
+        (.contains msg "Failed to process replica request") ::failed-replica-request
+        (.contains msg "Replication is timed out")          ::replication-timeout
+        (.contains msg "Unable to request next batch")      ::unable-request-batch
+        (.contains msg "Unable to send fragment")           ::unable-send-fragment
+        :else nil)))
+
+(defn fail [op error]
+  "Mark operation op as failed with a given error."
+  (assoc op :type :fail :error error))
+
+(defn invoke-ops [^Ignite ignite acc op]
   "Perform operations in a transaction."
-  (let [txn (.begin (.transactions ignite))
-        result (mapv #(case (first %)
-                        :r       (read! acc ignite txn %)
-                        :append  (append! acc ignite txn %))
-                     ops)]
-    (.commit txn)
-    result))
+  (try
+    ; (log/info "Ignite:" (.toString ignite))
+    (let [txn (.begin (.transactions ignite))
+          result (mapv #(case (first %)
+                          :r       (read! acc ignite txn %)
+                          :append  (append! acc ignite txn %))
+                       (:value op))]
+      (.commit txn)
+      (assoc op :type :info :value (into [] result)))
+    (catch SqlException e
+      (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
+    (catch TransactionException e
+      (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
+    (catch IgniteClientConnectionException _
+      (fail op ::not-connected))))
 
 (defn print-table-content [ignite]
   "Save resulting table content in the log."
-  (with-open [rs (run-sql (.sql ignite) sql-select-all [])]
-    (log/info "Table content")
-    (while (.hasNext rs)
-      (let [row (.next rs)]
-        (log/info (.intValue row 0) ":" (.stringValue row 1))))))
+  (try
+    (with-open [rs (run-sql ignite sql-select-all [])]
+      (log/info "Table content")
+      (while (.hasNext rs)
+        (let [row (.next rs)]
+          (log/info (.intValue row 0) ":" (.stringValue row 1)))))
+    (catch Exception e
+      (log/warn "Failed to get table content:" (.getMessage e)))))
 
-(defrecord Client [^Ignite ignite acc]
+(defrecord Client [ignite-builder acc]
   client/Client
-  ;
+
   (open! [this test node]
-    (let [ignite (-> (IgniteClient/builder)
-                     (.addresses (into-array [(str node ":10800")]))
-                     (.retryPolicy (RetryLimitPolicy.))
-                     (.build))]
-      (assoc this :ignite ignite)))
-  ;
+    (let [builder (-> (IgniteClient/builder)
+                      (.addresses (into-array [(str node ":10800")]))
+                      (.retryPolicy (RetryLimitPolicy.)))]
+        (assoc this :ignite-builder builder)))
+
+  (close! [this test])
+
   (setup! [this test]
-    (with-open [create-stmt (.createStatement (.sql ignite) sql-create)
-                rs (run-sql (.sql ignite) create-stmt [])]
-      (log/info "Table" table-name "created")))
-  ;
+    (try
+      (with-open [ignite              (.build ignite-builder)
+                  create-zone-stmt    (.createStatement (.sql ignite)
+                                                        (sql-create-zone (count (:nodes test))))
+                  zone-rs             (run-sql ignite create-zone-stmt [])
+                  create-table-stmt   (.createStatement (.sql ignite) sql-create)
+                  table-rs            (run-sql ignite create-table-stmt [])]
+        (log/info "Table" table-name "created"))
+      (catch IgniteClientConnectionException _)))
+
+  (teardown! [this test]
+    (try
+      (with-open [ignite (.build ignite-builder)]
+        (print-table-content ignite))
+      (catch IgniteClientConnectionException _)))
+
   (invoke! [this test op]
-    (let [ops   (:value op)
-          result (invoke-ops ignite acc ops)
-          overall-result (assoc op
-                                :type :info
-                                :value (into [] result))]
-      overall-result))
-  ;
-  (teardown! [this test] (print-table-content ignite))
-  ;
-  (close! [this test]
-    (.close ignite)))
+    (try
+      (with-open [ignite (.build ignite-builder)]
+        (invoke-ops ignite acc op))
+      (catch IgniteClientConnectionException _
+        (fail op ::not-connected)))))
 
 (comment "for repl"
 
