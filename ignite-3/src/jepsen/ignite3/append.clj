@@ -109,6 +109,19 @@
       (.put view txn (int k) new-value)
       [opcode k v])))
 
+; ---------- Mixed Access ----------
+
+(deftype MixedAccessor [delegate-odd delegate-even]
+  Accessor
+
+  (read! [this ignite txn [opcode k v]]
+    (let [delegate (odd? k delegate-odd delegate-even)]
+      (read! delegate ignite txn [opcode k v])))
+
+  (append! [this ignite txn [opcode k v]]
+    (let [delegate (odd? k delegate-odd delegate-even)]
+      (read! delegate ignite txn [opcode k v]))))
+
 ; ---------- General scenario ----------
 
 (defn extract-reason [exc]
@@ -213,7 +226,8 @@
 
 (def accessors
   {"sql" (SqlAccessor.)
-   "kv"  (KeyValueAccessor.)})
+   "kv"  (KeyValueAccessor.)
+   "mix" (MixedAccessor. (SqlAccessor.) (KeyValueAccessor.))})
 
 (defn append-test
   [opts]
