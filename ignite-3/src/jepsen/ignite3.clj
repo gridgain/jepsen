@@ -62,17 +62,17 @@
           ; use 1 CMG for cluster of 1-3 nodes, and 3 CMG for larger clusters
           cmg-size  (if (< 3 (count nodes)) 3 1)
           cmg-nodes (take cmg-size nodes)
-          params    (clojure.string/join " "
-                      (concat
-                        [(str "--meta-storage-node=" (node-name nodes node))]
-                        (mapv #(str "--cmg-node " (node-name nodes %)) cmg-nodes)))]
-      (info node "Init cluster with params: " params)
+          params    (concat
+                      ["bin/ignite3"
+                       "cluster"
+                       "init"
+                       "--cluster-name=ignite-cluster"
+                       (str "--meta-storage-node=" (node-name nodes node))]
+                      (flatten
+                        (map #(list "--cmg-node" (node-name nodes %)) cmg-nodes)))]
+      (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
-            (c/exec "bin/ignite3"
-                    "cluster"
-                    "init"
-                    "--cluster-name=ignite-cluster"
-                    (str "--meta-storage-node=" (node-name nodes node)))))
+            (apply c/exec params)))
     (Thread/sleep 3000)))
 
 (defn stop-node!
