@@ -56,14 +56,16 @@
   [test node]
   (start-node! test node)
   (Thread/sleep 3000)
+  ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
-    (info node "Init cluster")
-    (c/cd (cli-dir test)
-          (c/exec "bin/ignite3"
-                  "cluster"
-                  "init"
-                  "--cluster-name=ignite-cluster"
-                  (str "--meta-storage-node=" (node-name (:nodes test) node))))
+    (let [params (str "--meta-storage-node=" (node-name (:nodes test) node))]
+      (info node "Init cluster with params: " params)
+      (c/cd (cli-dir test)
+            (c/exec "bin/ignite3"
+                    "cluster"
+                    "init"
+                    "--cluster-name=ignite-cluster"
+                    (str "--meta-storage-node=" (node-name (:nodes test) node)))))
     (Thread/sleep 3000)))
 
 (defn stop-node!
