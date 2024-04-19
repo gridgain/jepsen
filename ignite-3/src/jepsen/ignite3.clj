@@ -58,20 +58,21 @@
   (Thread/sleep 3000)
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
-    (let [cmg-size  (if (< 3 (count (:nodes test))) 3 1)
+    (let [nodes     (:nodes test)
           ; use 1 CMG for cluster of 1-3 nodes, and 3 CMG for larger clusters
-          cmg-nodes (take cmg-size (:nodes test))
+          cmg-size  (if (< 3 (count nodes)) 3 1)
+          cmg-nodes (take cmg-size nodes)
           params    (clojure.string/join " "
                       (concat
-                        [(str "--meta-storage-node=" (node-name (:nodes test) node))]
-                        (mapv #(str "--cmg-node " %) cmg-nodes)))]
+                        [(str "--meta-storage-node=" (node-name nodes node))]
+                        (mapv #(str "--cmg-node " (node-name nodes %)) cmg-nodes)))]
       (info node "Init cluster with params: " params)
       (c/cd (cli-dir test)
             (c/exec "bin/ignite3"
                     "cluster"
                     "init"
                     "--cluster-name=ignite-cluster"
-                    (str "--meta-storage-node=" (node-name (:nodes test) node)))))
+                    (str "--meta-storage-node=" (node-name nodes node)))))
     (Thread/sleep 3000)))
 
 (defn stop-node!
