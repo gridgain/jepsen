@@ -58,7 +58,8 @@
   (Thread/sleep 3000)
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
-    (let [cmg-size  (min 3 (+ 1 (int (/ (count (:nodes test)) 2))))
+    (let [cmg-size  (if (< 3 (count (:nodes test))) 3 1)
+          ; use 1 CMG for cluster of 1-3 nodes, and 3 CMG for larger clusters
           cmg-nodes (take cmg-size (:nodes test))
           params    (clojure.string/join " "
                       (concat
