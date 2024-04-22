@@ -51,6 +51,18 @@
   (info node "Starting server node")
   (c/cd (db-dir test) (c/exec "bin/ignite3db" "start")))
 
+(defn init-command [test]
+  "Create a list of params to be passed into 'ignite cluster init' CLI command."
+  (let [nodes   (:nodes test)
+        ; use 1 CMG for cluster of 1-3 nodes, and 3 CMG for larger clusters
+        cmg-size  (if (< 3 (count nodes)) 3 1)
+        cmg-nodes (take cmg-size nodes)
+        params    (concat
+                    ["--cluster-name=ignite-cluster"]
+                    (flatten
+                      (map #(list "--meta-storage-node" (node-name nodes %)) cmg-nodes)))]
+        params))
+
 (defn start!
   "Starts server for the given node."
   [test node]
@@ -58,17 +70,8 @@
   (Thread/sleep 3000)
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
-    (let [nodes     (:nodes test)
-          ; use 1 CMG for cluster of 1-3 nodes, and 3 CMG for larger clusters
-          cmg-size  (if (< 3 (count nodes)) 3 1)
-          cmg-nodes (take cmg-size nodes)
-          params    (concat
-                      ["bin/ignite3"
-                       "cluster"
-                       "init"
-                       "--cluster-name=ignite-cluster"]
-                      (flatten
-                        (map #(list "--meta-storage-node" (node-name nodes %)) cmg-nodes)))]
+    (let [init-args (init-command test)
+          params    (concat ["bin/ignite3" "cluster" "init"] init-args)]
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
             (apply c/exec params)))
