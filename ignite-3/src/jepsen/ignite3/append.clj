@@ -23,9 +23,10 @@
 (def table-name "APPEND")
 
 (defn sql-create-zone
-  "Create replication zone with a given amount of table replicas"
-  [replicas]
-  (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas))
+  "Create replication zone with an amount of table replicas depending on cluster size"
+  [test]
+  (let [replicas (max 1 (count (:nodes test)))]
+    (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas)))
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
                      " with PRIMARY_ZONE='" table-name "_zone'"))
@@ -186,8 +187,7 @@
     (try
       (with-open [ignite              (.build ignite-builder)
                   create-zone-stmt    (.createStatement (.sql ignite)
-                                                        (sql-create-zone (max 1
-                                                                              (count (:nodes test)))))
+                                                        (sql-create-zone test))
                   zone-rs             (run-sql ignite create-zone-stmt [])
                   create-table-stmt   (.createStatement (.sql ignite) sql-create)
                   table-rs            (run-sql ignite create-table-stmt [])]
