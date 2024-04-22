@@ -186,7 +186,8 @@
     (try
       (with-open [ignite              (.build ignite-builder)
                   create-zone-stmt    (.createStatement (.sql ignite)
-                                                        (sql-create-zone (count (:nodes test))))
+                                                        (sql-create-zone (max 1
+                                                                              (count (:nodes test)))))
                   zone-rs             (run-sql ignite create-zone-stmt [])
                   create-table-stmt   (.createStatement (.sql ignite) sql-create)
                   table-rs            (run-sql ignite create-table-stmt [])]
