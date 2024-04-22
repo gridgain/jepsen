@@ -120,7 +120,7 @@
 
   (append! [this ignite txn [opcode k v]]
     (let [delegate (if (odd? k) delegate-odd delegate-even)]
-      (read! delegate ignite txn [opcode k v]))))
+      (append! delegate ignite txn [opcode k v]))))
 
 ; ---------- General scenario ----------
 
