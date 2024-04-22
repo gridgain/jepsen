@@ -66,10 +66,9 @@
                       ["bin/ignite3"
                        "cluster"
                        "init"
-                       "--cluster-name=ignite-cluster"
-                       (str "--meta-storage-node=" (node-name nodes node))]
+                       "--cluster-name=ignite-cluster"]
                       (flatten
-                        (map #(list "--cmg-node" (node-name nodes %)) cmg-nodes)))]
+                        (map #(list "--meta-storage-node" (node-name nodes %)) cmg-nodes)))]
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
             (apply c/exec params)))
