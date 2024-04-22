@@ -54,8 +54,8 @@
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
   (let [nodes   (:nodes test)
-        ; use 1 CMG for cluster of 1-3 nodes, and 3 CMG for larger clusters
-        cmg-size  (if (< 3 (count nodes)) 3 1)
+        ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
+        cmg-size  (if (< 2 (count nodes)) 3 1)
         cmg-nodes (take cmg-size nodes)
         params    (concat
                     ["--cluster-name=ignite-cluster"]

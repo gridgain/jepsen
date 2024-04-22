@@ -22,7 +22,9 @@
              (init-command test1)))
       (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"]
              (init-command test2)))
-      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"]
+      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"
+                                              "--meta-storage-node" "node-2"
+                                              "--meta-storage-node" "node-3"]
              (init-command test3)))
       (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"
                                               "--meta-storage-node" "node-2"
