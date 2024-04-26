@@ -23,9 +23,10 @@
 (def table-name "APPEND")
 
 (defn sql-create-zone
-  "Create replication zone with a given amount of table replicas"
-  [replicas]
-  (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas))
+  "Create replication zone with an amount of table replicas depending on cluster size"
+  [test]
+  (let [replicas (max 1 (count (:nodes test)))]
+    (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas)))
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
                      " with PRIMARY_ZONE='" table-name "_zone'"))
@@ -109,6 +110,19 @@
       (.put view txn (int k) new-value)
       [opcode k v])))
 
+; ---------- Mixed Access ----------
+
+(deftype MixedAccessor [delegate-odd delegate-even]
+  Accessor
+
+  (read! [this ignite txn [opcode k v]]
+    (let [delegate (if (odd? k) delegate-odd delegate-even)]
+      (read! delegate ignite txn [opcode k v])))
+
+  (append! [this ignite txn [opcode k v]]
+    (let [delegate (if (odd? k) delegate-odd delegate-even)]
+      (append! delegate ignite txn [opcode k v]))))
+
 ; ---------- General scenario ----------
 
 (defn extract-reason [exc]
@@ -132,7 +146,7 @@
 (defn invoke-ops [^Ignite ignite acc op]
   "Perform operations in a transaction."
   (try
-    ; (log/info "Ignite:" (.toString ignite))
+    (log/info "target:" (clojure.string/join "," (.addresses (.configuration ignite))))
     (let [txn (.begin (.transactions ignite))
           result (mapv #(case (first %)
                           :r       (read! acc ignite txn %)
@@ -173,7 +187,7 @@
     (try
       (with-open [ignite              (.build ignite-builder)
                   create-zone-stmt    (.createStatement (.sql ignite)
-                                                        (sql-create-zone (count (:nodes test))))
+                                                        (sql-create-zone test))
                   zone-rs             (run-sql ignite create-zone-stmt [])
                   create-table-stmt   (.createStatement (.sql ignite) sql-create)
                   table-rs            (run-sql ignite create-table-stmt [])]
@@ -213,7 +227,8 @@
 
 (def accessors
   {"sql" (SqlAccessor.)
-   "kv"  (KeyValueAccessor.)})
+   "kv"  (KeyValueAccessor.)
+   "mix" (MixedAccessor. (SqlAccessor.) (KeyValueAccessor.))})
 
 (defn append-test
   [opts]

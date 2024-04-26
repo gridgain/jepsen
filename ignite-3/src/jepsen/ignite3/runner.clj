@@ -24,11 +24,11 @@
                               (fn start
                                 [test node]
                                 (ign/stop-node! test node)
-                                [:paused node])
+                                [:paused (ign/node-name (:nodes test) node)])
                               (fn stop
                                 [test node]
                                 (ign/start-node! test node)
-                                [:resumed node]))})
+                                [:resumed (ign/node-name (:nodes test) node)]))})
 
 (def opt-spec
   "Command line options for tools.cli"
