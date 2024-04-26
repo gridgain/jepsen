@@ -10,10 +10,7 @@
                     [ignite3 :as ignite3]
                     [nemesis :as nemesis]]
             [jepsen.tests.cycle.append :as app])
-  (:import (java.util.concurrent            ExecutionException
-                                            TimeUnit
-                                            TimeoutException)
-           (org.apache.ignite               Ignite)
+  (:import (org.apache.ignite               Ignite)
            (org.apache.ignite.client        IgniteClient
                                             IgniteClientConnectionException
                                             RetryLimitPolicy)
@@ -101,17 +98,16 @@
 
   (read! [this ignite txn [opcode k v]]
     (let [view      (kv-view ignite)
-          raw-value (.get (.getAsync view txn (int k)) 5 TimeUnit/SECONDS)
-          value     (as-int-list raw-value)]
+          value     (as-int-list (.get view txn (int k)))]
       [:r k value]))
 
   (append! [this ignite txn [opcode k v]]
     (let [view      (kv-view ignite)
-          old-value (.get (.getAsync view txn (int k)) 5 TimeUnit/SECONDS)
+          old-value (.get view txn (int k))
           new-value (if (some? old-value)
                       (str old-value "," v)
                       (str v))]
-      (.get (.putAsync view txn (int k) new-value) 5 TimeUnit/SECONDS)
+      (.put view txn (int k) new-value)
       [opcode k v])))
 
 ; ---------- Mixed Access ----------
@@ -162,10 +158,6 @@
       (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
     (catch TransactionException e
       (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
-    (catch ExecutionException e
-      (if-some [reason (extract-reason e)] (fail op reason) (throw e)))
-    (catch TimeoutException _
-      (fail op ::timeout))
     (catch IgniteClientConnectionException _
       (fail op ::not-connected))))
 
