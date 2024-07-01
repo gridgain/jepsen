@@ -53,15 +53,14 @@
 
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
-  (let [nodes   (:nodes test)
+  (let [nodes       (:nodes test)
+        name-fn     (partial node-name nodes)
+        comma-join  (partial clojure.string/join ",")
         ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
-        cmg-size  (if (< 2 (count nodes)) 3 1)
-        cmg-nodes (take cmg-size nodes)
-        params    (concat
-                    ["--cluster-name=ignite-cluster"]
-                    (flatten
-                      (map #(list "--meta-storage-node" (node-name nodes %)) cmg-nodes)))]
-        params))
+        cmg-size    (if (< 2 (count nodes)) 3 1)
+        cmg-nodes   (take cmg-size nodes)]
+    ["--name=ignite-cluster"
+     (str "--metastorage-group=" (comma-join (map name-fn cmg-nodes)))]))
 
 (defn start!
   "Starts server for the given node."
