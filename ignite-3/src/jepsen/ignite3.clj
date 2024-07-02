@@ -45,11 +45,17 @@
     (c/exec :sed :-i (str "s/\"localhost:3344\"/" (clojure.string/join ", " (list-nodes all-nodes node)) "/")
                      (db-dir test "etc" "ignite-config.conf"))))
 
+(defn upload-wrapper!
+  "Upload node startup wrapper to the node."
+  [test node]
+  (info node "Upload startup wrapper")
+  (c/upload "bin/start-wrapper.sh" (str (db-dir test) "/start-wrapper.sh")))
+
 (defn start-node!
-  "Start a single Ignite node"
+  "Start a single Ignite node."
   [test node]
   (info node "Starting server node")
-  (c/cd (db-dir test) (c/exec "bin/ignite3db" "start")))
+  (c/cd (db-dir test) (c/exec "sh" "start-wrapper.sh" "bin/ignite3db")))
 
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
@@ -65,6 +71,7 @@
 (defn start!
   "Starts server for the given node."
   [test node]
+  (upload-wrapper! test node)
   (start-node! test node)
   (Thread/sleep 3000)
   ; Cluster must be initialized only once
@@ -78,7 +85,7 @@
 
 (defn stop-node!
   [test node]
-  (c/cd (db-dir test) (c/exec "bin/ignite3db" "stop")))
+  (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner"))
 
 (defn stop!
   "Shuts down server."
