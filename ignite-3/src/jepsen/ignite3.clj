@@ -70,11 +70,13 @@
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
   (let [nodes       (:nodes test)
         name-fn     (partial node-name nodes)
+        extra-opts  (clojure.string/split (:extra-init-options test) #" ")
         ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
         cmg-size    (if (< 2 (count nodes)) 3 1)
         cmg-nodes   (take cmg-size nodes)]
-    ["--name=ignite-cluster"
-     (str "--metastorage-group=" (join-comma (map name-fn cmg-nodes)))]))
+    (concat extra-opts
+            ["--name=ignite-cluster"
+             (str "--metastorage-group=" (join-comma (map name-fn cmg-nodes)))])))
 
 (def cli-starter-name {"ignite3"    "bin/ignite3"
                        "gridgain9"  "bin/gridgain9"})
