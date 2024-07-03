@@ -55,7 +55,7 @@
   "Upload node startup wrapper to the node."
   [test node]
   (info node "Upload startup wrapper")
-  (c/upload "bin/start-wrapper.sh" (str (db-dir test) "/start-wrapper.sh")))
+  (c/upload "bin/start-wrapper.sh" (db-dir test "start-wrapper.sh")))
 
 (def db-starter-name {"ignite3"     "bin/ignite3db"
                       "gridgain9"   "bin/gridgain9db"})
