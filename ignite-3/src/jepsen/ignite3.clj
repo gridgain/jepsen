@@ -129,7 +129,7 @@
 
     db/LogFiles
     (log-files [_ test node]
-      (let [files (c/exec :find (db-dir test "log") :-type "f" :-name "ignite3*")]
+      (let [files (c/exec :find (db-dir test "log") :-type "f")]
         (info node files)
         (into [] (.split files "\n"))))))
 
