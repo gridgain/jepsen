@@ -184,15 +184,14 @@
   (close! [this test])
 
   (setup! [this test]
-    (try
-      (with-open [ignite              (.build ignite-builder)
-                  create-zone-stmt    (.createStatement (.sql ignite)
-                                                        (sql-create-zone test))
-                  zone-rs             (run-sql ignite create-zone-stmt [])
-                  create-table-stmt   (.createStatement (.sql ignite) sql-create)
-                  table-rs            (run-sql ignite create-table-stmt [])]
-        (log/info "Table" table-name "created"))
-      (catch IgniteClientConnectionException _)))
+    (let [ignite            (.build ignite-builder)
+          create-zone-stmt  (.createStatement (.sql ignite) (sql-create-zone test))
+          create-table-stmt (.createStatement (.sql ignite) sql-create)]
+      (try
+        (with-open [zone-rs     (run-sql ignite create-zone-stmt [])
+                    table-rs    (run-sql ignite create-table-stmt [])]
+          (log/info "Table" table-name "created"))
+        (catch IgniteClientConnectionException _))))
 
   (teardown! [this test]
     (try

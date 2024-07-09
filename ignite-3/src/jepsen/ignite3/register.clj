@@ -56,8 +56,7 @@
 
   (teardown! [this test])
 
-  (close! [this test]
-    (.close ignite)))
+  (close! [this test]))
 
 (defn register-test
   [opts]

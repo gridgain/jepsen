@@ -39,6 +39,9 @@
    ["-f" "--flavour FLAVOUR"
     "What flavour of product to install"
     :default "ignite3"]
+   [nil "--extra-init-options OPTIONS"
+    "Extra options to be passed into cluster init command (see Ignite3 CLI docs)"
+    :default ""]
    ["-o" "--os NAME" "Operating system: either centos, debian, or noop."
     :default  :noop
     :parse-fn keyword
