@@ -46,7 +46,10 @@
     :default  :noop
     :parse-fn keyword
     :validate [#{:centos :debian :noop} "One of `centos` or `debian` or 'noop'"]]
-   [nil "--url URL" "URL to Ignite zip to install, has precedence over --version"
+   [nil "--url URL" "URL to Ignite DB zip to install, has precedence over --version"
+    :default nil
+    :parse-fn str]
+   [nil "--cli-url URL" "URL to Ignite CLI zip to install, has precedence over --version"
     :default nil
     :parse-fn str]
    ["-a" "--accessor ACCESSOR" (str "Accesor type, for append test only " (keys append/accessors))

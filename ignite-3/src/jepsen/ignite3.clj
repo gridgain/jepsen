@@ -121,7 +121,10 @@
     (setup! [_ test node]
       (info node "Installing" (:flavour test) version)
       (c/su
-        (cu/install-archive! (:url test) server-dir)
+        (c/exec :mkdir :-p server-dir)
+        (cu/install-archive! (:url test) (db-dir test))
+        (when (= 0 (.indexOf (:nodes test) node))
+          (cu/install-archive! (:cli-url test) (cli-dir test)))
         (configure-server! test node)
         (start! test node)))
 
