@@ -76,20 +76,23 @@
   (list (get {"ignite3" "bin/ignite3", "gridgain9" "bin/gridgain9"}
              (:flavour test))))
 
+(defn cmg-nodes [test]
+  "Extracts a list of cluster management group nodes from the test."
+  (let [nodes           (:nodes test)
+        name-fn         (partial node-name nodes)
+        ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
+        cmg-size        (if (< 2 (count nodes)) 3 1)
+        result-nodes    (take cmg-size nodes)]
+    (map name-fn result-nodes)))
+
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
-  (let [nodes       (:nodes test)
-        name-fn     (partial node-name nodes)
-        extra-opts  (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))
-        ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
-        cmg-size    (if (< 2 (count nodes)) 3 1)
-        cmg-nodes   (take cmg-size nodes)]
+  (let [extra-opts  (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))]
     (concat (env-from test)
             (cli-starter-name test)
             ["cluster" "init"]
             extra-opts
-            ["--name=ignite-cluster"
-             (str "--metastorage-group=" (join-comma (map name-fn cmg-nodes)))])))
+            ["--name=ignite-cluster" (str "--metastorage-group=" (join-comma (cmg-nodes test)))])))
 
 (defn start!
   "Starts server for the given node."
