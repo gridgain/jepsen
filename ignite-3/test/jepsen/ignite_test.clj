@@ -27,4 +27,10 @@
       (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test4)))
       (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
-             (init-command test5))))))
+             (init-command test5)))))
+
+  (testing "Use of extra init options"
+    (let [test1 {:nodes                 ["n1" "n2" "n3"]
+                 :extra-init-options    "--config-files=my.conf"}]
+      (is (= ["--config-files=my.conf" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
+             (init-command test1))))))
