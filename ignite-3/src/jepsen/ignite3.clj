@@ -86,7 +86,7 @@
   [test node]
   (upload-wrapper! test node)
   (start-node! test node)
-  (Thread/sleep 3000)
+  (Thread/sleep 10000)
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
     (let [init-args (init-command test)
@@ -94,7 +94,7 @@
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
             (apply c/exec params)))
-    (Thread/sleep 3000)))
+    (Thread/sleep 10000)))
 
 (defn stop-node!
   [test node]
