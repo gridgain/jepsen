@@ -86,7 +86,7 @@
     (map name-fn result-nodes)))
 
 (defn init-command [test]
-  "Create a list of params to be passed into 'ignite cluster init' CLI command."
+  "Create a full 'ignite cluster init' CLI command."
   (concat (env-from test)
           (cli-starter-name test)
           ["cluster" "init"]
