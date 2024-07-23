@@ -77,7 +77,7 @@
         ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
         cmg-size    (if (< 2 (count nodes)) 3 1)
         cmg-nodes   (take cmg-size nodes)]
-    (concat ["cluster" "init"]
+    (concat [(get cli-starter-name (:flavour test)) "cluster" "init"]
             extra-opts
             ["--name=ignite-cluster"
              (str "--metastorage-group=" (join-comma (map name-fn cmg-nodes)))])))
@@ -91,9 +91,7 @@
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
     (let [init-args (init-command test)
-          params    (concat [:env (:environment test)
-                             (get cli-starter-name (:flavour test))]
-                            init-args)]
+          params    (concat [:env (:environment test)] init-args)]
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
             (apply c/exec params)))

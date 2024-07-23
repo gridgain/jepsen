@@ -13,24 +13,25 @@
 
 (deftest init-command-test
   (testing "Generation of init command sequence"
-    (let [test1 {:nodes ["n1"]}
-          test2 {:nodes ["n1" "n2"]}
-          test3 {:nodes ["n1" "n2" "n3"]}
-          test4 {:nodes ["n1" "n2" "n3" "n4"]}
-          test5 {:nodes ["n1" "n2" "n3" "n4" "n5"]}]
-      (is (= ["cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
+    (let [test1 {:flavour "ignite3" :nodes ["n1"]}
+          test2 {:flavour "ignite3" :nodes ["n1" "n2"]}
+          test3 {:flavour "ignite3" :nodes ["n1" "n2" "n3"]}
+          test4 {:flavour "ignite3" :nodes ["n1" "n2" "n3" "n4"]}
+          test5 {:flavour "ignite3" :nodes ["n1" "n2" "n3" "n4" "n5"]}]
+      (is (= ["bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
              (init-command test1)))
-      (is (= ["cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
+      (is (= ["bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
              (init-command test2)))
-      (is (= ["cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
+      (is (= ["bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test3)))
-      (is (= ["cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
+      (is (= ["bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test4)))
-      (is (= ["cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
+      (is (= ["bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test5)))))
 
   (testing "Use of extra init options"
-    (let [test1 {:nodes                 ["n1" "n2" "n3"]
+    (let [test1 {:flavour               "ignite3"
+                 :nodes                 ["n1" "n2" "n3"]
                  :extra-init-options    "--config-files=my.conf"}]
-      (is (= ["cluster" "init" "--config-files=my.conf" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
+      (is (= ["bin/ignite3" "cluster" "init" "--config-files=my.conf" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test1))))))
