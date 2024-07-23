@@ -64,7 +64,7 @@
   "Start a single Ignite node."
   [test node]
   (info node "Starting server node")
-  (c/cd (db-dir test) (c/exec "sh" "start-wrapper.sh" (get db-starter-name (:flavour test)))))
+  (c/cd (db-dir test) (c/exec :env (:environment test) "sh" "start-wrapper.sh" (get db-starter-name (:flavour test)))))
 
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
@@ -90,7 +90,9 @@
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
     (let [init-args (init-command test)
-          params    (concat [(get cli-starter-name (:flavour test)) "cluster" "init"] init-args)]
+          params    (concat [:env (:environment test)
+                             (get cli-starter-name (:flavour test)) "cluster" "init"]
+                            init-args)]
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
             (apply c/exec params)))
