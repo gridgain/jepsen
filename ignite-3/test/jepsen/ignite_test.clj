@@ -18,19 +18,13 @@
           test3 {:nodes ["n1" "n2" "n3"]}
           test4 {:nodes ["n1" "n2" "n3" "n4"]}
           test5 {:nodes ["n1" "n2" "n3" "n4" "n5"]}]
-      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"]
+      (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1"]
              (init-command test1)))
-      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"]
+      (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1"]
              (init-command test2)))
-      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"
-                                              "--meta-storage-node" "node-2"
-                                              "--meta-storage-node" "node-3"]
+      (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test3)))
-      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"
-                                              "--meta-storage-node" "node-2"
-                                              "--meta-storage-node" "node-3"]
+      (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test4)))
-      (is (= ["--cluster-name=ignite-cluster" "--meta-storage-node" "node-1"
-                                              "--meta-storage-node" "node-2"
-                                              "--meta-storage-node" "node-3"]
+      (is (= ["" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
              (init-command test5))))))

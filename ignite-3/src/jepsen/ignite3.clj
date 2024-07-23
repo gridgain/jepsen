@@ -70,7 +70,7 @@
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
   (let [nodes       (:nodes test)
         name-fn     (partial node-name nodes)
-        extra-opts  (clojure.string/split (:extra-init-options test) #" ")
+        extra-opts  (clojure.string/split (get test :extra-init-options "") #" ")
         ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
         cmg-size    (if (< 2 (count nodes)) 3 1)
         cmg-nodes   (take cmg-size nodes)]
