@@ -34,4 +34,11 @@
                  :nodes                 ["n1" "n2" "n3"]
                  :extra-init-options    "--config-files=my.conf"}]
       (is (= ["bin/ignite3" "cluster" "init" "--config-files=my.conf" "--name=ignite-cluster" "--metastorage-group=node-1,node-2,node-3"]
+             (init-command test1)))))
+
+  (testing "Pass custom environment"
+    (let [test1 {:flavour       "gridgain9"
+                 :nodes         ["n1"]
+                 :environment   "JAVA_HOME=/opt/java/jdk-open-11"}]
+      (is (= [:env "JAVA_HOME=/opt/java/jdk-open-11" "bin/gridgain9" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
              (init-command test1))))))

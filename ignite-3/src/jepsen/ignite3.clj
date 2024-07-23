@@ -69,7 +69,7 @@
 (defn env-from [test]
   "Gets environment settings from test, if any, or empty list otherwise."
   (let [e (:environment test)]
-    (if (some? e) (:env e) [])))
+    (if (some? e) [(:env e)] [])))
 
 (defn cli-starter-name [test]
   "Extracts the name of CLI utility for test, as a list."
