@@ -66,20 +66,21 @@
   (info node "Starting server node")
   (c/cd (db-dir test) (c/exec :env (:environment test) "sh" "start-wrapper.sh" (get db-starter-name (:flavour test)))))
 
+(def cli-starter-name {"ignite3"    "bin/ignite3"
+                       "gridgain9"  "bin/gridgain9"})
+
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
   (let [nodes       (:nodes test)
         name-fn     (partial node-name nodes)
-        extra-opts  (clojure.string/split (get test :extra-init-options "") #" ")
+        extra-opts  (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))
         ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
         cmg-size    (if (< 2 (count nodes)) 3 1)
         cmg-nodes   (take cmg-size nodes)]
-    (concat extra-opts
+    (concat ["cluster" "init"]
+            extra-opts
             ["--name=ignite-cluster"
              (str "--metastorage-group=" (join-comma (map name-fn cmg-nodes)))])))
-
-(def cli-starter-name {"ignite3"    "bin/ignite3"
-                       "gridgain9"  "bin/gridgain9"})
 
 (defn start!
   "Starts server for the given node."
@@ -91,7 +92,7 @@
   (when (= 0 (.indexOf (:nodes test) node))
     (let [init-args (init-command test)
           params    (concat [:env (:environment test)
-                             (get cli-starter-name (:flavour test)) "cluster" "init"]
+                             (get cli-starter-name (:flavour test))]
                             init-args)]
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
