@@ -87,12 +87,11 @@
 
 (defn init-command [test]
   "Create a list of params to be passed into 'ignite cluster init' CLI command."
-  (let [extra-opts  (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))]
-    (concat (env-from test)
-            (cli-starter-name test)
-            ["cluster" "init"]
-            extra-opts
-            ["--name=ignite-cluster" (str "--metastorage-group=" (join-comma (cmg-nodes test)))])))
+  (concat (env-from test)
+          (cli-starter-name test)
+          ["cluster" "init"]
+          (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))
+          ["--name=ignite-cluster" (str "--metastorage-group=" (join-comma (cmg-nodes test)))]))
 
 (defn start!
   "Starts server for the given node."
