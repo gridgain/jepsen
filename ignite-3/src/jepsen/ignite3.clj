@@ -57,19 +57,23 @@
   (info node "Upload startup wrapper")
   (c/upload "bin/start-wrapper.sh" (db-dir test "start-wrapper.sh")))
 
-(def db-starter-name {"ignite3"     "bin/ignite3db"
-                      "gridgain9"   "bin/gridgain9db"})
+(defn env-from [test]
+  "Gets environment settings from test, if any, or empty list otherwise."
+  (let [e (:environment test)]
+    (if (some? e) [(:env e)] [])))
+
+(defn db-starter-name [test]
+  "Extracts the name of DB executable for test, as a list."
+  (list (get {"ignite3" "bin/ignite3db", "gridgain9" "bin/gridgain9db"}
+             (:flavour test))))
 
 (defn start-node!
   "Start a single Ignite node."
   [test node]
   (info node "Starting server node")
-  (c/cd (db-dir test) (c/exec :env (:environment test) "sh" "start-wrapper.sh" (get db-starter-name (:flavour test)))))
-
-(defn env-from [test]
-  "Gets environment settings from test, if any, or empty list otherwise."
-  (let [e (:environment test)]
-    (if (some? e) [(:env e)] [])))
+  (let [start-command (concat (env-from test)
+                              ["sh" "start-wrapper.sh" (db-starter-name test)])]
+    (c/cd (db-dir test) (apply c/exec start-command))))
 
 (defn cli-starter-name [test]
   "Extracts the name of CLI utility for test, as a list."
