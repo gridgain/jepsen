@@ -60,7 +60,7 @@
 (defn env-from [test]
   "Gets environment settings from test, if any, or empty list otherwise."
   (let [e (:environment test)]
-    (if (some? e) [(:env e)] [])))
+    (if (some? e) [:env e] [])))
 
 (defn db-starter-name [test]
   "Extracts the name of DB executable for test, as a list."

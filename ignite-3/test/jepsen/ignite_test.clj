@@ -39,6 +39,11 @@
   (testing "Pass custom environment"
     (let [test1 {:flavour       "gridgain9"
                  :nodes         ["n1"]
-                 :environment   "JAVA_HOME=/opt/java/jdk-open-11"}]
+                 :environment  "JAVA_HOME=/opt/java/jdk-open-11"}
+          test2 {:flavour       "ignite3"
+                 :nodes         ["n1"]
+                 :environment   "JAVA_HOME=/opt/java/jdk-open-17"}]
       (is (= [:env "JAVA_HOME=/opt/java/jdk-open-11" "bin/gridgain9" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
-             (init-command test1))))))
+             (init-command test1)))
+      (is (= [:env "JAVA_HOME=/opt/java/jdk-open-17" "bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--metastorage-group=node-1"]
+             (init-command test2))))))
