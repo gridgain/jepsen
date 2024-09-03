@@ -7,6 +7,8 @@
                  [jepsen "0.3.4"]
                  [org.apache.ignite/ignite-client "3.0.0-SNAPSHOT"]
                  [org.apache.ignite/ignite-core "3.0.0-SNAPSHOT"]]
+  :profiles {:gg {:repositories
+                    [["gridgain-snapshots" "https://www.gridgainsystems.com/nexus/content/repositories/gridgain-snapshots/"]]}}
   :java-source-paths ["src/java"]
   :target-path "target/%s"
   :main jepsen.ignite3.runner
