@@ -42,6 +42,9 @@
    [nil "--extra-init-options OPTIONS"
     "Extra options to be passed into cluster init command (see Ignite3 CLI docs)"
     :default ""]
+   [nil "--environment ENVIRONMENT"
+    "Environment variables to pass into Ignite3 DB and CLI (like \"JAVA_HOME=..\")"
+    :default nil]
    ["-o" "--os NAME" "Operating system: either centos, debian, or noop."
     :default  :noop
     :parse-fn keyword

@@ -52,53 +52,68 @@
                      (db-dir test "etc" (get config-name (:flavour test))))))
 
 (defn upload-wrapper!
-  "Upload node startup wrapper to the node."
+  "Upload node startup wrapper to the node. TODO: try cu/start-daemon! instead"
   [test node]
   (info node "Upload startup wrapper")
   (c/upload "bin/start-wrapper.sh" (db-dir test "start-wrapper.sh")))
 
-(def db-starter-name {"ignite3"     "bin/ignite3db"
-                      "gridgain9"   "bin/gridgain9db"})
+(defn env-from [test]
+  "Gets environment settings from test, if any, or empty list otherwise."
+  (let [e (:environment test)]
+    (if (some? e) [:env e] [])))
+
+(defn db-starter-name [test]
+  "Extracts the name of DB executable for test, as a list."
+  (list (get {"ignite3" "bin/ignite3db", "gridgain9" "bin/gridgain9db"}
+             (:flavour test))))
 
 (defn start-node!
   "Start a single Ignite node."
   [test node]
   (info node "Starting server node")
-  (c/cd (db-dir test) (c/exec "sh" "start-wrapper.sh" (get db-starter-name (:flavour test)))))
+  (let [start-command (concat (env-from test)
+                              ["sh" "start-wrapper.sh" (db-starter-name test)])]
+    (c/cd (db-dir test) (apply c/exec start-command))))
+
+(defn cli-starter-name [test]
+  "Extracts the name of CLI utility for test, as a list."
+  (list (get {"ignite3" "bin/ignite3", "gridgain9" "bin/gridgain9"}
+             (:flavour test))))
+
+(defn cmg-nodes [test]
+  "Extracts a list of cluster management group nodes from the test."
+  (let [nodes           (:nodes test)
+        name-fn         (partial node-name nodes)
+        ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
+        cmg-size        (if (< 2 (count nodes)) 3 1)
+        result-nodes    (take cmg-size nodes)]
+    (map name-fn result-nodes)))
 
 (defn init-command [test]
-  "Create a list of params to be passed into 'ignite cluster init' CLI command."
-  (let [nodes       (:nodes test)
-        name-fn     (partial node-name nodes)
-        extra-opts  (clojure.string/split (:extra-init-options test) #" ")
-        ; use 1 storage node for cluster of 1-2 nodes, and 3 storage nodes for larger clusters
-        cmg-size    (if (< 2 (count nodes)) 3 1)
-        cmg-nodes   (take cmg-size nodes)]
-    (concat extra-opts
-            ["--name=ignite-cluster"
-             (str "--metastorage-group=" (join-comma (map name-fn cmg-nodes)))])))
-
-(def cli-starter-name {"ignite3"    "bin/ignite3"
-                       "gridgain9"  "bin/gridgain9"})
+  "Create a full 'ignite cluster init' CLI command."
+  (concat (env-from test)
+          (cli-starter-name test)
+          ["cluster" "init"]
+          (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))
+          ["--name=ignite-cluster" (str "--metastorage-group=" (join-comma (cmg-nodes test)))]))
 
 (defn start!
   "Starts server for the given node."
   [test node]
   (upload-wrapper! test node)
   (start-node! test node)
-  (Thread/sleep 3000)
+  (Thread/sleep 10000)
   ; Cluster must be initialized only once
   (when (= 0 (.indexOf (:nodes test) node))
-    (let [init-args (init-command test)
-          params    (concat [(get cli-starter-name (:flavour test)) "cluster" "init"] init-args)]
+    (let [params (init-command test)]
       (info node "Init cluster as: " params)
       (c/cd (cli-dir test)
             (apply c/exec params)))
-    (Thread/sleep 3000)))
+    (Thread/sleep 10000)))
 
 (defn stop-node!
   [test node]
-  (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner"))
+  (c/su (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner")))
 
 (defn stop!
   "Shuts down server."
