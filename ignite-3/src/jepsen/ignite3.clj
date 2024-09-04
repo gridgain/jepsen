@@ -113,7 +113,7 @@
 
 (defn stop-node!
   [test node]
-  (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner"))
+  (c/su (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner")))
 
 (defn stop!
   "Shuts down server."
