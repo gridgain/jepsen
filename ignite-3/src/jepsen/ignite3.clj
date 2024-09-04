@@ -52,7 +52,7 @@
                      (db-dir test "etc" (get config-name (:flavour test))))))
 
 (defn upload-wrapper!
-  "Upload node startup wrapper to the node."
+  "Upload node startup wrapper to the node. TODO: try cu/start-daemon! instead"
   [test node]
   (info node "Upload startup wrapper")
   (c/upload "bin/start-wrapper.sh" (db-dir test "start-wrapper.sh")))
