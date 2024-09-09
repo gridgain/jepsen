@@ -137,7 +137,7 @@
       (info node "Installing" (:flavour test) version)
       (c/su
         (c/exec :mkdir :-p server-dir)
-        (c/exec :chown :-r (:username test) server-dir))
+        (c/exec :chown :-r (:username (:ssh test)) server-dir))
       (cu/install-archive! (:url test) (db-dir test))
       (when (= 0 (.indexOf (:nodes test) node))
         (cu/install-archive! (:cli-url test) (cli-dir test)))
