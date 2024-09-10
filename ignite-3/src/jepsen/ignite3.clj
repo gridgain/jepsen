@@ -113,7 +113,7 @@
 
 (defn stop-node!
   [test node]
-  (c/su (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner")))
+  (c/exec :pkill :-15 :-f "org.apache.ignite.internal.app.IgniteRunner"))
 
 (defn stop!
   "Shuts down server."
@@ -137,11 +137,12 @@
       (info node "Installing" (:flavour test) version)
       (c/su
         (c/exec :mkdir :-p server-dir)
-        (cu/install-archive! (:url test) (db-dir test))
-        (when (= 0 (.indexOf (:nodes test) node))
-          (cu/install-archive! (:cli-url test) (cli-dir test)))
-        (configure-server! test node)
-        (start! test node)))
+        (c/exec :chown :-R (:username (:ssh test)) server-dir))
+      (cu/install-archive! (:url test) (db-dir test))
+      (when (= 0 (.indexOf (:nodes test) node))
+        (cu/install-archive! (:cli-url test) (cli-dir test)))
+      (configure-server! test node)
+      (start! test node))
 
     (teardown! [_ test node]
       (info node "Teardown" (:flavour test) version)
