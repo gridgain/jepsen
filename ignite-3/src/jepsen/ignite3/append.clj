@@ -29,7 +29,7 @@
     (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas)))
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
-                     " with PRIMARY_ZONE='" table-name "_zone'"))
+                     " ZONE \"" table-name "_zone\""))
 
 (def sql-select-all (str "select * from " table-name))
 
