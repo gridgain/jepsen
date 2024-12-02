@@ -21,15 +21,16 @@
 ; ---------- Common definitions ----------
 
 (def table-name "APPEND")
+(def zone-name (str \" table-name "_zone" \"))
 
 (defn sql-create-zone
   "Create replication zone with an amount of table replicas depending on cluster size"
   [test]
   (let [replicas (max 1 (count (:nodes test)))]
-    (str "create zone if not exists \"" table-name "_zone\" with storage_profiles='default', replicas=" replicas)))
+    (str "create zone if not exists " zone-name " with storage_profiles='default', replicas=" replicas)))
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
-                     " with PRIMARY_ZONE='" table-name "_zone'"))
+                     " ZONE " zone-name))
 
 (def sql-select-all (str "select * from " table-name))
 
