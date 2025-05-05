@@ -21,7 +21,7 @@
     (let [test1 {:flavour               "ignite3"
                  :nodes                 ["n1" "n2" "n3"]
                  :extra-init-options    "--config-files=my.conf"}]
-      (is (= ["bin/ignite3" "cluster" "init" "--config-files=my.conf" "--name=ignite-cluster"]
+      (is (= ["bin/ignite3" "cluster" "init" "--name=ignite-cluster" "--config-files=my.conf"]
              (init-command test1)))))
 
   (testing "Pass custom environment"

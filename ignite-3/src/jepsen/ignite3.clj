@@ -84,9 +84,8 @@
   "Create a full 'ignite cluster init' CLI command."
   (concat (env-from test)
           (cli-starter-name test)
-          ["cluster" "init"]
-          (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))
-          ["--name=ignite-cluster"]))
+          ["cluster" "init" "--name=ignite-cluster"]
+          (remove empty? (clojure.string/split (get test :extra-init-options "") #" "))))
 
 (defn start!
   "Starts server for the given node."
