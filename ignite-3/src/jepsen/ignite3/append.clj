@@ -27,7 +27,7 @@
   "Create replication zone with an amount of table replicas depending on cluster size"
   [test]
   (let [replicas (max 1 (count (:nodes test)))]
-    (str "create zone if not exists " zone-name " with storage_profiles='default', replicas=" replicas)))
+    (str "create zone if not exists " zone-name " (replicas " replicas ") storage profiles ['default']")))
 
 (def sql-create (str "create table if not exists " table-name "(key int primary key, vals varchar(1000))"
                      " ZONE " zone-name))
